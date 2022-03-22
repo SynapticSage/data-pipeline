@@ -1,0 +1,84 @@
+let SessionLoad = 1
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+cd ~/Code/pipeline/preprocess
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +30 ~/Code/pipeline/extraction/extraction_RY16
+badd +76 ~/Code/pipeline/extraction/extraction_RY16_single.m
+badd +18 ~/Code/pipeline/ry_pipeline/ry_generateRecOrder.m
+badd +28 ~/Code/pipeline/extraction/iterateively_preprocess_animal-ry16.sh
+badd +18 ~/Code/pipeline/TrodesExtractionGUI/RN_exportBinary.m
+badd +101 ~/Code/pipeline/extraction/iterateively_preprocess_animal-ry9.sh
+badd +1 extraction_RY7_parallel.m
+badd +1 extraction_RY9_parallel.m
+badd +1 mcz_preprocess_YD6_zg.m
+badd +1 ry_generateRecOrder.m
+badd +1 ry_selectDays.m
+badd +92 ~/Code/pipeline/extraction/extraction_RY9.m
+badd +67 ~/Code/pipeline/extraction/extraction_RY9
+badd +1 ~/Code/pipeline/ry_pipeline/ry_validateAndFixFolder.m
+badd +1 ~/Code/pipeline/TrodesExtractionGUI/RN_createTrodesComments.m
+badd +7 ~/Code/pipeline/TrodesExtractionGUI/getTrodesCommentsStrings.m
+badd +69 ~/Code/pipeline/ry_pipeline/+commentLib/getTrodesCommentsStrings.m
+argglobal
+%argdel
+$argadd extraction_RY16_parallel.m
+$argadd extraction_RY7_parallel.m
+$argadd extraction_RY9_parallel.m
+$argadd mcz_preprocess_YD6_zg.m
+$argadd ry_generateRecOrder.m
+$argadd ry_selectDays.m
+edit ~/Code/pipeline/extraction/extraction_RY9.m
+set splitbelow splitright
+set nosplitbelow
+set nosplitright
+wincmd t
+set winminheight=0
+set winheight=1
+set winminwidth=0
+set winwidth=1
+argglobal
+if bufexists("~/Code/pipeline/extraction/extraction_RY9.m") | buffer ~/Code/pipeline/extraction/extraction_RY9.m | else | edit ~/Code/pipeline/extraction/extraction_RY9.m | endif
+let s:l = 89 - ((18 * winheight(0) + 17) / 34)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+89
+normal! 036|
+tabedit ~/Code/pipeline/extraction/extraction_RY9
+set splitbelow splitright
+set nosplitbelow
+set nosplitright
+wincmd t
+set winminheight=0
+set winheight=1
+set winminwidth=0
+set winwidth=1
+argglobal
+if bufexists("~/Code/pipeline/extraction/extraction_RY9") | buffer ~/Code/pipeline/extraction/extraction_RY9 | else | edit ~/Code/pipeline/extraction/extraction_RY9 | endif
+let s:l = 137 - ((12 * winheight(0) + 13) / 27)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+137
+normal! 064|
+tabnext 2
+if exists('s:wipebuf') && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 winminheight=1 winminwidth=1 shortmess=filnxtToOc
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . fnameescape(s:sx)
+endif
+let &so = s:so_save | let &siso = s:siso_save
+let g:this_session = v:this_session
+let g:this_obsession = v:this_session
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :

@@ -1,0 +1,179 @@
+animID     = 'RY16';
+
+%% PATHS, FOLDERS, METADATA
+%% ========================
+% PATH
+addpath(genpath('~/Code/pipeline'))
+addpath(genpath('~/Code/projects/goalmazebehavior'))
+addpath('~/Code')
+
+% FOLDER 
+% -------
+root   = fullfile(filesep, 'Volumes', 'GenuDrive');
+expDir = fullfile(root);
+%expDir = fullfile(root, 'ry_GoalCoding_Project');
+
+% Animal specific files
+rawDir = [expDir  filesep animID '_fix' filesep];
+[dayDirs, sessionList, sessionIndex] = ry_selectDays(rawDir, 34);
+%dataDir = [expDir filesep [animID '_experiment'] filesep animID '_direct' filesep];
+dataDir = [expDir filesep animID '_direct' filesep];
+
+% Config file
+% -----------
+configFile =  sprintf('~/Configs/%s/%s_fix.trodesconf', animID, animID);
+
+% Log file
+% --------
+currDir = pwd;
+logFile = [dataDir animID 'preprocess.log'];
+
+% Tetrode metadata
+% ----------------
+[hpc, pfc] = deal(1, 2, 3);
+[tetStruct, areas, tetList, refList] = ry_getAreasTetsRefs('configFile', configFile, 'removeAreas', [ "SuperDead" ]);
+nTets = max(cellfun(@max, tetList));
+%riptetlist = [1,2,3,4,5,6]; % Where to grab ripples from?
+
+%% Start log file
+%% ==============
+% If logFile, attach a header sequence
+if exist(logFile,'file')
+    HEADER = 1;
+else
+    HEADER = 0;
+end
+% Get our diary up and running
+diary(logFile)
+if HEADER
+    fprintf('\n\n')
+end
+disp(datestr(now,0))
+fprintf('Preprocessing %s\nExperiment Directory: %s\nRaw Directory: %s\nData Directory: %s\n\n',animID,expDir,rawDir,dataDir);
+disp('Day Order:')
+disp(dayDirs')
+fprintf('\n\n')
+
+%% Copy deepLabCut outputs to animal folders
+%% ===========================================
+% In this future, this might be better left as an extraction step
+dlcDir{1} = fullfile(expDir, 'deeplabcut', 'goalmaze_led-Ryan-2020-05-5');
+dlcDir{2} = fullfile(expDir, 'deeplabcut', 'goalmaze_tape-Ryan-2020-05-28');
+ry_deeplabcut.copyResultsToRawDir(dlcDir, rawDir);
+        
+%% DAY DEPENDENT  (POS, LFP, SPIKES, DIO, TASK)
+%% ====================================================
+numDays = max(sessionIndex);
+dayStart = find(contains(dayDirs,'69_'));  %numDays; 
+dayStop  = find(contains(dayDirs,'69_'));  %numDays; 
+for sessionNum = dayStart:dayStop
+    
+    fprintf('PreProcessing %s Day %02i...\n',animID,sessionNum);
+    dayDir = fullfile(rawDir, dayDirs{sessionNum});
+
+    % Checksum
+    [validation, validationTable] = ry_validateAndFixFolder(dayDir);
+    if ~validation % checks if folder has one *.stateScriptLog per epoch and if each trodesComment for each epoch only one start and one stop
+        disp(validationTable)
+    end
+
+    % POSITION
+    ry_deeplabcut.generateRawPosFile(dayDir, dataDir,  animID, sessionNum,
+                                    'tableOutputDir', fullfile(dataDir,'deepinsight'))
+                                    'cmPerPixel', []);
+    ry_createNQPosFiles(dayDir, dataDir, animID, sessionNum);
+    
+    %% LFP
+    %rn_createNQLFPFiles(dayDir, dataDir, animID, sessionNum);
+
+    %% SPIKES
+    %mcz_createNQSpikesFiles(rawDir, dataDir, animID, sessionNum) 
+
+    % DIO
+    %mcz_createNQDIOFiles(dayDir, dataDir, animID, sessionNum
+    ry_createNQDIOFilesFromStateScriptLogs(dayDir, dataDir, animID, sessionNum)
+
+    %% TASK
+    epochExcelSheet = fullfile(expDir, 'ry16.xlsx');
+    taskLib.trodeTaskCommentsFromExcelSheet(dayDir, animID, epochExcelSheet, sessionNum);
+    %taskLib.generateTaskStructFromComments(dayDir, animID);
+    %ry_deeplabcut.addTaskMetrics(dlcDir, dayDir, animID);
+    %createtaskstruct(dataDir,animID,[sessionNum 2; sessionNum 4], 'getcoord_wtrack');
+end
+
+%% DAY INDEPENDENT (cellinfo, tetinfo)
+%% ===================================
+disp('Creating cell & tet info structures')
+
+% Initialize marker structures
+createtetinfostruct(dataDir,animID);
+mcz_createcellinfostruct(dataDir,animID); 
+
+% Describe tetrodes
+sj_addtetrodelocation(dataDir,    animID, tetList{hpc}, 'CA1');
+sj_addtetrodelocation(dataDir,    animID, tetList{pfc}, 'PFC');
+sj_addtetrodelocation(dataDir,    animID, tetList{ctx}, 'Ctx');
+sj_addtetrodedescription(dataDir, animID, refList{hpc},  'CA1Ref');
+sj_addtetrodedescription(dataDir, animID, refList{pfc},  'PFCRef');
+sj_addtetrodedescription(dataDir, animID, refList{ctx},  'CtxRef');
+%sj_addtetrodedescription(dir1,prefix,riptetlist,'riptet'); 
+%sj_addcellinfotag2(dataDir,animID); 
+
+% MountainSort
+
+% EEG preprocess
+% Get number of epochs
+cd(dayDir)
+epochs = getEpochs(1);
+nEpochs = size(epochs,1);
+
+% Reference EEG or rename?
+configurationUnreferenced = ~ry_getConfigRefState('configFile', configFile);
+cd(currDir)
+if any(configurationUnreferenced)
+    % refData -- an E x N matrix with the local reference for each tetrode
+    %            where unused tetrodes have a ref of zero.
+    refData = zeros(nEpochs,nTets);
+    for i=1:numel(tetList),
+        refData(:,tetList{i}) = refList{sessionNum}(i);
+    end
+         
+    mcz_createRefEEG(rawDir, dataDir, animID, sessionNum, refData)
+    filterDir = [fileparts(which('mcz_deltadayprocess.m')) filesep 'Filters' filesep];
+    fprintf('Delta Filtering LFPs...\n')
+    mcz_deltadayprocess(dayDir,  dataDir, animID, sessionNum, 'f', [filterDir 'deltafilter.mat'])
+    fprintf('Gamma Filtering LFPs...\n')
+    mcz_gammadayprocess(dayDir,  dataDir, animID, sessionNum, 'f', [filterDir 'gammafilter.mat'])
+    fprintf('Ripple Filtering LFPs...\n')
+    mcz_rippledayprocess(dayDir, dataDir, animID, sessionNum, 'f', [filterDir 'ripplefilter.mat'])
+    fprintf('Theta Filtering LFPs...\n')
+    mcz_thetadayprocess(dayDir,  dataDir, animID, sessionNum, 'f', [filterDir 'thetafilter.mat'])
+else
+    ry_renameEEGtoEEGref()
+end
+     
+%% GOALMAZE SPECIFIC (requires animaldef at this point
+%% ===================================================
+matfileDirectory =  fullfile(expDir, 'matlab');
+% Matlab files sometimes have gui objects that make them unloadable: delete those
+matfileLib.sanitizeDirectory(matfileDirectory);
+
+% Create callback data struct
+callbackLib.preprocess(dataDir, matfileDirectory, animID, dayDirs(dayStart:dayStop),...
+    'mapping', sessionIndex(dayStart:dayStop))
+% Generate maze files from callback files
+% (these store the meanings of the DIOs for the given experiment)
+callbackLib.generateMazeFiles(animID, dataDir, ...
+    "orderingFields", ["platforms","zones"],...
+    "nameRemapping", ["leds","cue"; "leds_negative", "cue_negative"; "rewards", "reward"; "normal", "arena"; "inputs", "poke"],...
+    'deleteFields', ["homein"],...
+    'regionLabels', ["home","arena"]);
+
+dioLib.generateDioTables(animID, 'assumeMazeFilesSame', 2);
+
+%======== Higher order trial information ========
+trialLib.trialsFromDio(animID, dataDir); % REQUIRES POS/task/DIO/diotable types!
+% Barrier paths Home well paths Barrier-home well paths
+% Mean distance for barrier-home path type
+% Likely goal_x goal_y
+

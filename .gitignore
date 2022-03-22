@@ -1,0 +1,8 @@
+*.vim
+INSTRUCTIONS.txt
+Trodes*
+Trodes*/
+SpikeGadgets/
+matclust*/
+SpikeGadgets
+sorter/

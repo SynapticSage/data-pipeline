@@ -1,0 +1,252 @@
+
+                                  < M A T L A B (R) >
+                        Copyright 1984-2020 The MathWorks, Inc.
+                        R2020b (9.9.0.1467703) 64-bit (glnxa64)
+                                    August 26, 2020
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+Matlab startup script - Ryan Y 
+... primary startup ... 
+ 
+-----------------
+ Adding Legacy Code Folders 
+ -----------------
+ 
+-----------------
+ Adding Local Projects 
+ -----------------
+Adding all directories in ~/Code/Src_Matlab
+[Warning: Function iscolumn has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function ismatrix has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function isrow has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function narginchk has the same name as a MATLAB builtin. We suggest you rename
+the function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function isequaln has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function randg has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+[Warning: Function isstring has the same name as a MATLAB builtin. We suggest you rename the
+function to avoid a potential name conflict.] 
+[> In path (line 109)
+In StartupShortcuts>@(x)path(genpath(x),path) (line 2)
+In startup (line 67)
+In startup (line 2)] 
+Finished ~/Code/Src_Matlab
+Adding all directories in /usr/local/chronux_2_12
+Finished /usr/local/chronux_2_12
+Adding all directories in ~/Code/Statescript
+Finished ~/Code/Statescript
+Adding all directories in ~/Code/usrlocal/
+Finished ~/Code/usrlocal/
+Adding buzsaki lab code
+--------------------------------------------------
+---------------- DONE ----------------------------
+--------------------------------------------------
+
+animalRawDir =
+
+    '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+
+
+animalRawDirOut =
+
+    '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+
+
+dayDirs = 
+
+  1x25 string array
+
+  Columns 1 through 5
+
+    "45_20200324"    "46_20200325"    "47_20200326"    "48_20200327"    "49_20200328"
+
+  Columns 6 through 10
+
+    "50_20200329"    "51_20200330"    "52_20200331"    "53_20200401"    "54_20200402"
+
+  Columns 11 through 15
+
+    "55_20200403"    "56_20200404"    "57_20200405"    "58_20200407"    "59_20200407"
+
+  Columns 16 through 20
+
+    "60_20200408"    "61_20200409"    "62_20200410"    "63_20200411"    "64_20200413"
+
+  Columns 21 through 25
+
+    "65_20200414"    "66_20200415"    "67_20200416"    "68_20200417"    "69_20200418"
+
+
+sessionList =
+
+  Columns 1 through 15
+
+    45    46    47    48    49    50    51    52    53    54    55    56    57    58    59
+
+  Columns 16 through 25
+
+    60    61    62    63    64    65    66    67    68    69
+
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/45_20200324] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/46_20200325] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/47_20200326] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/48_20200327] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/49_20200328] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/50_20200329] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/51_20200330] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/52_20200331] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/53_20200401] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/54_20200402] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/55_20200403] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/56_20200404] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/57_20200405] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/58_20200407] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/59_20200407] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/60_20200408] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/61_20200409] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/62_20200410] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/63_20200411] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/64_20200413] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/65_20200414] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/66_20200415] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/67_20200416] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/68_20200417] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+[Warning: Missing files for
+/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix/69_20200418] 
+[> In ry_generateRecOrder (line 39)
+In extraction_RY16_single (line 27)] 
+
+recOrder =
+
+  25x1 cell array
+
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+    {0x0 double}
+
+Exports:  000%  |                                            | 0/1 [00:00:00<Inf:NaN:NaN, Inf it/s]Exports:  100%  |████████████████████████████████████████████| 1/1 [00:00:00<00:00:00, 14.40 s/it]

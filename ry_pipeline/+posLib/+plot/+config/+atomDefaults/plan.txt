@@ -1,0 +1,8 @@
+---------------------------
+Each object in here returns
+---------------------------
+1. Default object parser
+2. List of instruction.type that matches the parser
+
+Every object in the folder where posLib.config.atomDefaults.init.m is searched
+and sequentially the above occurs

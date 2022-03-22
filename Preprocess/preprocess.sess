@@ -1,0 +1,86 @@
+let SessionLoad = 1
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+cd ~/Code/pipeline/preprocess
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +51 extraction_RY16_parallel.m
+badd +82 extraction_RY7_parallel.m
+badd +31 extraction_RY9_parallel.m
+badd +4 ~/Code/pipeline/TrodesExtractionGUI/RY_waitForExports.m
+badd +121 ~/Code/pipeline/TrodesExtractionGUI/RN_fixFilenames.m
+badd +16 ~/Code/pipeline/pipeline-filterframework/mcz_createNQDIOFiles.m
+badd +6 ~/Code/pipeline/pipeline-filterframework/mcz_createNQDIOFilesFromStateScriptLogs.m
+badd +197 ~/Code/pipeline/TrodesToMatlab/readTrodesTaskFile.m
+badd +7 ~/Code/pipeline/TrodesExtractionGUI/RN_createTrodesComments.m
+badd +33 ~/Code/pipeline/TrodesExtractionGUI/getTrodesCommentsStrings.m
+badd +14 ~/Code/pipeline/TrodesExtractionGUI/RN_exportBinary.m
+badd +1 ../Example_preprocess.m
+badd +9 check_preprocess.sh
+badd +51 extraction_RY16
+badd +1 extraction_RY16_single.m
+badd +182 currentExtraction.log
+badd +0 ../iterateively_preprocess_animal.sh
+argglobal
+%argdel
+$argadd extraction_RY16_parallel.m
+$argadd extraction_RY7_parallel.m
+$argadd extraction_RY9_parallel.m
+$argadd preprocess_RY7.m
+$argadd ry_generateRecOrder.m
+$argadd ry_selectDays.m
+edit ../iterateively_preprocess_animal.sh
+set splitbelow splitright
+wincmd _ | wincmd |
+vsplit
+1wincmd h
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winminheight=0
+set winheight=1
+set winminwidth=0
+set winwidth=1
+exe 'vert 1resize ' . ((&columns * 104 + 104) / 208)
+exe 'vert 2resize ' . ((&columns * 103 + 104) / 208)
+argglobal
+if bufexists("../iterateively_preprocess_animal.sh") | buffer ../iterateively_preprocess_animal.sh | else | edit ../iterateively_preprocess_animal.sh | endif
+let s:l = 98 - ((47 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+98
+normal! 0
+wincmd w
+argglobal
+if bufexists("../iterateively_preprocess_animal.sh") | buffer ../iterateively_preprocess_animal.sh | else | edit ../iterateively_preprocess_animal.sh | endif
+let s:l = 1 - ((0 * winheight(0) + 26) / 53)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+1
+normal! 0
+wincmd w
+2wincmd w
+exe 'vert 1resize ' . ((&columns * 104 + 104) / 208)
+exe 'vert 2resize ' . ((&columns * 103 + 104) / 208)
+tabnext 1
+if exists('s:wipebuf') && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 winminheight=1 winminwidth=1 shortmess=filnxtToOc
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . fnameescape(s:sx)
+endif
+let &so = s:so_save | let &siso = s:siso_save
+let g:this_session = v:this_session
+let g:this_obsession = v:this_session
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :
