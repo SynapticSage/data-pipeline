@@ -102,175 +102,175 @@ marks{sessionNum} = cell(1,Nepochs);
 marks{sessionNum}(:) = {cell(1,Ntets)};
 
 
-%% ------------------------------------------------------------
-%% FIRING 
-%% ------------------------------------------------------------
-% Process curated and uncurated firing!
-if (processspikes || processmultiunit) && ...
-   ( ~exist(saveFile, 'file') || ~exist(multiunitSaveFile, 'file') || overwrite)
-
-    curraw = [0, 0, 0];
-    for k=progress(1:numel(tetDirs), 'Title', 'Firings: processing tetrode direcetories')
-
-        tD = [tetDirs(k).folder filesep tetDirs(k).name];
-        tetNum = tet_nums(k);
-        if exist([tD filesep 'metrics_curated.json'], 'file')
-            metFile = [tD filesep 'metrics_curated.json'];
-        elseif exist([tD filesep 'metrics_tagged.json'], 'file')
-            metFile = [tD filesep 'metrics_tagged.json'];
-        else
-            warning('no metrics')
-            if keyboard_on_notag
-                keyboard
-            end
-        end
-
-        paramsFile = [tD filesep 'params.json'];
-        if exist(paramsFile,'file')
-            params = jsondecode(fileread(paramsFile));
-            if params.samplerate ~= samplerate
-                error('Varargin samplerate must match samplingrate in params.json');
-            end
-        end
-
-        curatedFireFile = [tD filesep 'firings.curated.mda'];
-        rawFireFile     = [tD filesep 'firings_raw.mda'];
-        marksFile       = [tD filesep 'marks.mda'];
-        if isfile(curatedFireFile) 
-            curraw(1) = curraw(1) + 1;
-            fireFile = curatedFireFile;
-            firingType = "curated";
-        elseif isfile(rawFireFile)
-            curraw(2) = curraw(2) + 1;
-            fireFile = rawFireFile;
-            firingType = "raw";
-        else
-            curraw(3) = curraw(3) + 1;
-            fireFile = "null";
-            firingType = "null";
-        end
-        
-        if fireFile ~= "null"
-
-            
-            firingDat = readmda(fireFile);       % Rows are # Channels, timestamp (starting @ 0), cluster #
-            firingDat(:,firingDat(2,:)==0) = []; % Delete any zero time indiceess ... unsure how or why these ever appear
-            fireTimes = timeDat(firingDat(2,:));
-
-            % Parse metadata
-            metDat = jsondecode(fileread(metFile));
-            metDat = metDat.clusters;
-            clusters = [metDat.label];
-            %Nclust = max(clusters)+any(clusters==0); % RY this causes errors, no more zero cluster eg
-            Nclust = numel(clusters);
-            [clusters,ic] = sort(clusters,'ascend');
-            metDat = metDat(ic);
-
-            % Counters
-            taglessCnt = 0;
-
-            % EPOCHS
-            for l=progress(1:Nepochs,'Title', 'processing epochs')
-
-                % Allocate
-                if firingType == "spikes"
-                    spikes{sessionNum}{l}{tetNum} = cell(1,Nclust);
-                elseif firingType == "multiunit"
-                    multiunit{sessionNum}{l}{tetNum} = cell(1,Nclust);
-                end
-
-                % CLUSTERS
-                for m=1:Nclust
-
-                    % Determine bounds to sample
-                    t1 = epoch_starts(l);
-                    if l<Nepochs
-                        t2 = epoch_starts(l+1)-1;
-                    else
-                        t2=timeDat(end);
-                    end
-                    idx = firingDat(3,:)==clusters(m) & fireTimes>=t1 & fireTimes<=t2;
-
-                    mD = metDat(m).metrics;
-                    msID = metDat(m).label;
-                    dat = zeros(sum(idx),7);
-                    fields = 'time x y dir not_used amplitude(highest variance channel) posindex n_detection_channels';
-                    descript = 'spike data from MountainSort 4 (MountainLab-JS)';
-                    meanrate = mD.firing_rate;
-                    peak_amplitude = mD.peak_amp;
-                    dat(:,1) = fireTimes(idx)'/samplerate;
-                    dat(:,7) = firingDat(1,idx)';
-                    tag = metDat(m).tags; 
-                    % refractory_violation_1msec = mD.refractory_violation_1msec; % No longer found in curated mda, possibly due to version update
-                    %if any(strcmp(tag,'accepted'))
-                    %    tag = tag{strcmp(tag,'accepted')};
-                    %end
-                    if isempty(tag) && l == 1
-                        taglessCnt = taglessCnt + 1;
-                    end
-                    if any(ismember(string(tag), tagIgnore))
-                        continue
-                    end
-                    if numel(string(tag)) == 1
-                        tag = char(string(tag));
-                    end
-                    if firingType == "curated" && isequal("accepted", string(tag))
-                        spikes{sessionNum}{l}{tetNum}{m} = struct('data',dat,...
-                            'meanrate',meanrate,...
-                            'descript',descript,...
-                            'fields',fields,...
-                            'timerange',[t1 t2]/samplerate,...
-                            'tag',tag,...
-                            'metrics', mD,...
-                            'msID', msID,...
-                            'peak_amplitude',peak_amplitude);
-                    end
-                    if ~isequal("rejected", string(tag)) && ~ismember("rejected", string(tag))
-                        multiunit{sessionNum}{l}{tetNum}{m} = struct('data',dat,...
-                            'meanrate',meanrate,...
-                            'descript',descript,...
-                            'fields',fields,...
-                            'timerange',[t1 t2]/samplerate,...
-                            'tag',tag,...
-                            'metrics', mD,...
-                            'msID', msID,...
-                            'peak_amplitude',peak_amplitude);
-                    end
-                end
-            end
-            if taglessCnt > 0
-                warning('tet %d: %d clusters have no tags!', tetNum, taglessCnt);
-                if keyboard_on_notag
-                    keyboard
-                end
-            end
-        else
-            fprintf('No curated or raw firings file found for tetrode %i. Skipping...\n',tetNum);
-        end
-
-    end % Iterate tetrode folders
-
-    %% ------------------------------------------------------------
-    %% SAVE SHIT
-    %% ------------------------------------------------------------
-    % SAVE SPIKES
-    if processspikes
-        save(saveFile,'spikes', '-v7.3');   
-    end
-   
-    % SAVE MULTIUNIT
-    if processmultiunit
-        spike_inds = ndb.indicesMatrixForm(spikes);
-        if ~isempty(spike_inds)
-            for sind = spike_inds'
-                multiunit = ndb.set(multiunit, sind, ndb.get(spikes, sind));
-            end
-        end
-    end
-    save(multiunitSaveFile,'multiunit', '-v7.3');   
-else % If spikes already exists and not overwrite
-    fprintf('Spikes file @ %s already exists. Skipping...\n',saveFile)
-end
+%%% ------------------------------------------------------------
+%%% FIRING 
+%%% ------------------------------------------------------------
+%% Process curated and uncurated firing!
+%if (processspikes || processmultiunit) && ...
+%   ( ~exist(saveFile, 'file') || ~exist(multiunitSaveFile, 'file') || overwrite)
+%
+%    curraw = [0, 0, 0];
+%    for k=progress(1:numel(tetDirs), 'Title', 'Firings: processing tetrode direcetories')
+%
+%        tD = [tetDirs(k).folder filesep tetDirs(k).name];
+%        tetNum = tet_nums(k);
+%        if exist([tD filesep 'metrics_curated.json'], 'file')
+%            metFile = [tD filesep 'metrics_curated.json'];
+%        elseif exist([tD filesep 'metrics_tagged.json'], 'file')
+%            metFile = [tD filesep 'metrics_tagged.json'];
+%        else
+%            warning('no metrics')
+%            if keyboard_on_notag
+%                keyboard
+%            end
+%        end
+%
+%        paramsFile = [tD filesep 'params.json'];
+%        if exist(paramsFile,'file')
+%            params = jsondecode(fileread(paramsFile));
+%            if params.samplerate ~= samplerate
+%                error('Varargin samplerate must match samplingrate in params.json');
+%            end
+%        end
+%
+%        curatedFireFile = [tD filesep 'firings.curated.mda'];
+%        rawFireFile     = [tD filesep 'firings_raw.mda'];
+%        marksFile       = [tD filesep 'marks.mda'];
+%        if isfile(curatedFireFile) 
+%            curraw(1) = curraw(1) + 1;
+%            fireFile = curatedFireFile;
+%            firingType = "curated";
+%        elseif isfile(rawFireFile)
+%            curraw(2) = curraw(2) + 1;
+%            fireFile = rawFireFile;
+%            firingType = "raw";
+%        else
+%            curraw(3) = curraw(3) + 1;
+%            fireFile = "null";
+%            firingType = "null";
+%        end
+%        
+%        if fireFile ~= "null"
+%
+%            
+%            firingDat = readmda(fireFile);       % Rows are # Channels, timestamp (starting @ 0), cluster #
+%            firingDat(:,firingDat(2,:)==0) = []; % Delete any zero time indiceess ... unsure how or why these ever appear
+%            fireTimes = timeDat(firingDat(2,:));
+%
+%            % Parse metadata
+%            metDat = jsondecode(fileread(metFile));
+%            metDat = metDat.clusters;
+%            clusters = [metDat.label];
+%            %Nclust = max(clusters)+any(clusters==0); % RY this causes errors, no more zero cluster eg
+%            Nclust = numel(clusters);
+%            [clusters,ic] = sort(clusters,'ascend');
+%            metDat = metDat(ic);
+%
+%            % Counters
+%            taglessCnt = 0;
+%
+%            % EPOCHS
+%            for l=progress(1:Nepochs,'Title', 'processing epochs')
+%
+%                % Allocate
+%                if firingType == "spikes"
+%                    spikes{sessionNum}{l}{tetNum} = cell(1,Nclust);
+%                elseif firingType == "multiunit"
+%                    multiunit{sessionNum}{l}{tetNum} = cell(1,Nclust);
+%                end
+%
+%                % CLUSTERS
+%                for m=1:Nclust
+%
+%                    % Determine bounds to sample
+%                    t1 = epoch_starts(l);
+%                    if l<Nepochs
+%                        t2 = epoch_starts(l+1)-1;
+%                    else
+%                        t2=timeDat(end);
+%                    end
+%                    idx = firingDat(3,:)==clusters(m) & fireTimes>=t1 & fireTimes<=t2;
+%
+%                    mD = metDat(m).metrics;
+%                    msID = metDat(m).label;
+%                    dat = zeros(sum(idx),7);
+%                    fields = 'time x y dir not_used amplitude(highest variance channel) posindex n_detection_channels';
+%                    descript = 'spike data from MountainSort 4 (MountainLab-JS)';
+%                    meanrate = mD.firing_rate;
+%                    peak_amplitude = mD.peak_amp;
+%                    dat(:,1) = fireTimes(idx)'/samplerate;
+%                    dat(:,7) = firingDat(1,idx)';
+%                    tag = metDat(m).tags; 
+%                    % refractory_violation_1msec = mD.refractory_violation_1msec; % No longer found in curated mda, possibly due to version update
+%                    %if any(strcmp(tag,'accepted'))
+%                    %    tag = tag{strcmp(tag,'accepted')};
+%                    %end
+%                    if isempty(tag) && l == 1
+%                        taglessCnt = taglessCnt + 1;
+%                    end
+%                    if any(ismember(string(tag), tagIgnore))
+%                        continue
+%                    end
+%                    if numel(string(tag)) == 1
+%                        tag = char(string(tag));
+%                    end
+%                    if firingType == "curated" && isequal("accepted", string(tag))
+%                        spikes{sessionNum}{l}{tetNum}{m} = struct('data',dat,...
+%                            'meanrate',meanrate,...
+%                            'descript',descript,...
+%                            'fields',fields,...
+%                            'timerange',[t1 t2]/samplerate,...
+%                            'tag',tag,...
+%                            'metrics', mD,...
+%                            'msID', msID,...
+%                            'peak_amplitude',peak_amplitude);
+%                    end
+%                    if ~isequal("rejected", string(tag)) && ~ismember("rejected", string(tag))
+%                        multiunit{sessionNum}{l}{tetNum}{m} = struct('data',dat,...
+%                            'meanrate',meanrate,...
+%                            'descript',descript,...
+%                            'fields',fields,...
+%                            'timerange',[t1 t2]/samplerate,...
+%                            'tag',tag,...
+%                            'metrics', mD,...
+%                            'msID', msID,...
+%                            'peak_amplitude',peak_amplitude);
+%                    end
+%                end
+%            end
+%            if taglessCnt > 0
+%                warning('tet %d: %d clusters have no tags!', tetNum, taglessCnt);
+%                if keyboard_on_notag
+%                    keyboard
+%                end
+%            end
+%        else
+%            fprintf('No curated or raw firings file found for tetrode %i. Skipping...\n',tetNum);
+%        end
+%
+%    end % Iterate tetrode folders
+%
+%    %% ------------------------------------------------------------
+%    %% SAVE SHIT
+%    %% ------------------------------------------------------------
+%    % SAVE SPIKES
+%    if processspikes
+%        save(saveFile,'spikes', '-v7.3');   
+%    end
+%   
+%    % SAVE MULTIUNIT
+%    if processmultiunit
+%        spike_inds = ndb.indicesMatrixForm(spikes);
+%        if ~isempty(spike_inds)
+%            for sind = spike_inds'
+%                multiunit = ndb.set(multiunit, sind, ndb.get(spikes, sind));
+%            end
+%        end
+%    end
+%    save(multiunitSaveFile,'multiunit', '-v7.3');   
+%else % If spikes already exists and not overwrite
+%    fprintf('Spikes file @ %s already exists. Skipping...\n',saveFile)
+%end
 
 % ---------------------------------------------------------------
 %% MARKS
@@ -355,6 +355,10 @@ if processmarks && (overwrite || ~exist(markSaveFile, 'file'))
 
                     % Capture mark data
                     times = fireTimes(idx)'/samplerate;
+                    if length(idx) ~= size(markDat,2)
+                        warning("Something is wrong with your marks file for" + string(tD))
+                        continue
+                    end
                     dat = markDat(:, idx)';
                     if keepMarkClusterInformation
                         dat = [dat, repmat(m, size(dat,1), 1)];

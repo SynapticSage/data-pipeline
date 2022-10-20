@@ -6,3 +6,6 @@ SpikeGadgets/
 matclust*/
 SpikeGadgets
 sorter/
+*.tar.gz
+*.tar
+*.asv

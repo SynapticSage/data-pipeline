@@ -10,6 +10,14 @@ dodecode      = false;
 dorsync       = true;
 doprocessmaze = false;
 
+% ----------------
+% Mountainsort controls and knobs
+% ----------------
+extractmarks         = false; % produce marks for marked point process?
+overwriteMoutainSort = true; % overwrite ms files?
+% Regular expression for finding mountainsort folders (if your naming differs, you can change this)
+mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_(?<overallDay>[0-9]{1,3})_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
+
 % ---------------
 % Main parameters
 % ---------------
@@ -45,27 +53,20 @@ expDir = fullfile(root);
 % ---------------------
 % Animal specific files
 % ---------------------
-rawDir = Info.rawDir;
-[dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir, 34);
-
-dataDir       = Info.directDir;
-spikesDataDir = Info.directDir;
-
-% -----------
-% Config file
-% -----------
-configFile =  sprintf('~/Configs/%s/%s_fix.trodesconf', animal, animal);
-
+Info   = animalinfo(animal);
+[dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir,...
+                                                     Info.rawFirstSession);
 % --------
 % Log file
 % --------
 currDir = pwd;
-logFile = [dataDir animal 'preprocess.log'];
+logFile = [Info.directDir animal 'preprocess.log'];
 
 % Tetrode metadata
 % ----------------
 [hpcL, hpcR, pfc] = deal(1, 2, 3);
-[tetStruct, areas, tetList, refList] = ry_getAreasTetsRefs('configFile', configFile,...
+[tetStruct, areas, tetList, refList] = ry_getAreasTetsRefs(...
+    'configFile', Info.configFile,...
     'removeAreas', [ "SuperDead" ],...
     'selectMostFrequentRef', true);
 refList(hpcL) = refList(hpcR);
@@ -86,7 +87,9 @@ if HEADER
     fprintf('\n\n')
 end
 disp(datestr(now,0))
-fprintf('Preprocessing %s\nExperiment Directory: %s\nRaw Directory: %s\nData Directory: %s\n\n',animal,Info.expDir,Info.rawDir,Info.directDir);
+
+fprintf('Preprocessing %s\nExperiment Directory: %s\nRaw Directory: %s\nData Directory: %s\n\n',...
+    animal,Info.expDir,Info.rawDir,Info.directDir);
 disp('Day Order:')
 disp(dayDirs')
 fprintf('\n\n')
@@ -108,15 +111,15 @@ end
 %% GOALMAZE SPECIFIC (requires animaldef at this point
 %% ===================================================
 if doprocessmaze
-    matfileDirectory =  fullfile(expDir, 'matlab');
+    matfileDirectory =  fullfile(Info.expDir, 'matlab');
     % Matlab files sometimes have gui objects that make them unloadable: delete those
     matfileLib.sanitizeDirectory(matfileDirectory);
     % Create callback data struct
-    callbackLib.preprocess(dataDir, matfileDirectory, animal, dayDirs(dayStart:direction:dayStop),...
+    callbackLib.preprocess(Info.directDir, matfileDirectory, animal, dayDirs(dayStart:direction:dayStop),...
         'mapping', sessionIndex(dayStart:direction:dayStop))
     % Generate maze files from callback files
     % (these store the meanings of the DIOs for the given experiment)
-    callbackLib.generateMazeFiles(animal, dataDir, ...
+    callbackLib.generateMazeFiles(animal, Info.directDir, ...
         "orderingFields", ["platforms","zones"],...
         "nameRemapping",  ["leds","cue"; ...
                            "leds_negative", "cue_negative";...
@@ -182,7 +185,7 @@ for day = daySequence
     %rawLib.ry_createNQRawFiles(dayDir, dataDir, animal, day);
     % LFP dependencies --> exportLFP
     if dolfp && (numel(dir(fullfile(dayDir, '*.LFP','*')))-2) > 0
-        rn_createNQLFPFiles(dayDir, dataDir, animal, day);
+        rn_createNQLFPFiles(dayDir, Info.directDir, animal, sessionNum);
     end
 
     % --------
@@ -192,18 +195,18 @@ for day = daySequence
         % POSITION  -> dependcies: deeplabcut
         % ------------------------
         if ~exist('cmperpix','var')
-            cmperpix  = ry_deeplabcut.cmperpix(dayDir, dataDir, animal, day, 'CM', 'useAverageOfSessions', sessionAverages);
+            cmperpix  = ry_deeplabcut.cmperpix(dayDir, Info.directDir, animal, sessionNum, 'CM', 'useAverageOfSessions', sessionAverages);
         end
-        ry_deeplabcut.createNQRawPosFiles(dayDir, dataDir,  animal, day,...
-        'tableOutputDir', fullfile(dataDir,'deepinsight'),...
+        ry_deeplabcut.createNQRawPosFiles(dayDir, Info.directDir,  animal, sessionNum,...
+        'tableOutputDir', fullfile(Info.directDir,'deepinsight'),...
         'cmPerPixel', cmperpix);
-        ry_deeplabcut.createNQPosFiles(dayDir, dataDir, animal, day);
+        ry_deeplabcut.createNQPosFiles(dayDir, Info.directDir, animal, sessionNum);
         
 
         % TASK FILE GENERATION dependencies --> POS, curated trodesComments
         % -----------------------------------------------------------------
-        taskLib.initializeTaskStruct(dayDir, dataDir, animal, day, 'videoToDataDir', 'link');
-        taskLib.addCoordinateLabels(dayDir, dataDir, animal, day,...
+        taskLib.initializeTaskStruct(dayDir, Info.directDir, animal, sessionNum, 'videoToDataDir', 'link');
+        taskLib.addCoordinateLabels(dayDir, Info.directDir, animal, sessionNum,...
                                     'coordprogram', @getcoord_gmaze,...
                                     'tryAverageOfSessions', sessionAverages,...
                                     'overwrite',  false);
@@ -227,9 +230,9 @@ for day = daySequence
 
         %======== Higher order trial information ========
         % Trials dependencies -> Task (w/ coords), Pos, DIO, Dio-video registration
-        trialLib.create.events(animal, day);
-        trialLib.create.traj(animal,   day);
-        posLib.create.goalPos(animal,  day);
+        trialLib.create.events(animal, sessionNum);
+        trialLib.create.traj(animal,   sessionNum);
+        posLib.create.goalPos(animal,  sessionNum);
     end
 
     % --------------------
@@ -242,6 +245,7 @@ for day = daySequence
     % Spiking (Mountainsort)
     % ----------------------
     if dospiking
+
         mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_(?<overallDay>[0-9]{1,3})_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
         tet_options = ry_ml_tetoption(unique(areas), tetList);
         ml_process_animal(animal, rawDir,...
@@ -253,11 +257,13 @@ for day = daySequence
             'extractmarks',  true,             ...
             'tet_options', tet_options);
 
-        readSpikes =  fullfile(spikesDataDir, 'MountainSort',...
-            sprintf('%s_%02d.mountain',animal,day));
-        convert_ml_to_FF_withMultiunitAndMarks(animal, readSpikes, ...
-            day, 'overwrite', true, ...
-            'keyboard_on_notag', false);
+        ms_store = fullfile(Info.directDir, 'MountainSort',...
+            sprintf('%s_%02d.mountain',animal,sessionNum))
+        convert_ml_to_FF_withMultiunitAndMarks(animal, ms_store, ...
+            sessionNum, 'tet_options', tet_options, 'overwrite', true);
+        cellLib.update.cells(animal,     'index', sessionNum)
+        cellLib.update.multiunit(animal, 'index', sessionNum)
+
         util.notify.pushover("Spikes", "Finished spikess/marks");
 
         % 
@@ -268,13 +274,13 @@ for day = daySequence
 
         % Describe tetrodes
         % -----------------
-        tetrode.add(animal, day, "hemisphere",...
+        tetrode.add(animal, sessionNum, "hemisphere",...
             [tetList{hpcR},  tetList{pfc}, refList{hpcR}], 'right',...
             [tetList{hpcL}, refList{hpcL}], 'left');
-        tetrode.add(animal, day, "area",...
+        tetrode.add(animal, sessionNum, "area",...
             [tetList{hpcR} tetList{hpcL}, refList{hpcR}, refList{hpcL}], 'CA1',...
             tetList{pfc}, 'PFC');
-        tetrode.add(animal, day, "descrip",...
+        tetrode.add(animal, sessionNum, "descrip",...
             [refList{hpcR} refList{hpcL}],  'CA1Ref',...
              refList{pfc},  'PFCRef');
         util.notify.pushover("Spikes", "Finished markgin tetrode props");
@@ -300,8 +306,7 @@ for day = daySequence
             'tasktype', 'run',...
             'changefield', {'time','postime'},...
             'transpose', true);
-        rawLib.append.marks(animal, day)
-
+        rawLib.append.marksAndSpikes(animal, day, 'addMarks', false);
     end
 
     if dolfp
@@ -360,11 +365,11 @@ disp('Creating/updating cell & tet info structures')
 % ----------------------------
 % Clean metadata structures 
 % ----------------------------
-tetrode.update.tetinfo(dataDir,  animal);
-cellLib.create.cellinfo(dataDir, animal); 
-cellLib.create.multiinfo(dataDir, animal); 
-coding.make.info_table(animal, 'cellinfo');
-coding.make.info_table(animal, 'tetinfo');
+tetrode.update.tetinfo(Info.directDir,  animal);
+cellLib.create.cellinfo(Info.directDir, animal); 
+cellLib.create.multiinfo(Info.directDir, animal); 
+coding.table.info(animal, 'cellinfo');
+coding.table.info(animal, 'tetinfo');
 
 % -------------------
 % LFP post-processing
@@ -392,7 +397,6 @@ if eegFiles && configurationUnreferenced
         for i=1:numel(tetList)
             refData(:,tetList{i}) = refList{day}(i);
         end
-             
         mcz_createRefEEG(rawDir, dataDir, animal, day, refData)
 else ~configurationUnreferenced % eeg files and they say "referenced"
     % ALREADY referenced, but we're called them EEG....

@@ -129,10 +129,7 @@ end
 % In this future, this might be better left as an extraction step
 copy_dlc_files = false; % false when you've already run this once
 if copy_dlc_files
-    dlcDir    = {};
-    dlcDir{1} = fullfile(Info.expDir, 'deeplabcut', 'goalmaze_led-Ryan-2020-05-25');
-    dlcDir{2} = fullfile(Info.expDir, 'deeplabcut', 'goalmaze_tape-Ryan-2020-05-28');
-    ry_deeplabcut.copyDLCResultsToRawDir(dlcDir, Info.rawDir+dayDirs);
+    ry_deeplabcut.copyDLCResultsToRawDir(Info.dlcDirs, Info.rawDir+dayDirs);
 end
 
 if dorsync
@@ -156,12 +153,14 @@ if dorsync
     util.rsync.rawpull(animal, dayDirs{daySequence(1)}, 'sessionNum', dayStart, rsync_kws{:});
 end
 
-sessionNum = dayStart;
-for sessionNum = daySequence
+sessionNum = 21; disp(dayDirs{sessionNum})
+%sessionNum = dayStart;
+%for sessionNum = daySequence
 
     fprintf('PreProcessing %s Day %02i...\n',animal,sessionNum);
     dayDir = fullfile(Info.rawDir, dayDirs{sessionNum}); 
-
+    dayDir = fullfile(Info.rawDir, "21_20211107")
+    disp(dayDir)
     % ---------
     % Checksum 
     % ---------
@@ -187,8 +186,12 @@ for sessionNum = daySequence
     if dobehavior
         % POSITION  -> dependcies: deeplabcut
         % ------------------------
-        if ~exist('cmperpix','var')
-            cmperpix  = ry_deeplabcut.cmperpix(dayDir, Info.directDir, animal, sessionNum, 'CM', 'useAverageOfSessions', sessionAverages);
+        % CMPERPIX requires rawpos first!
+        ry_deeplabcut.createNQRawPosFiles(dayDir, Info.directDir,  animal, sessionNum,...
+        'tableOutputDir', fullfile(Info.directDir,'deepinsight'));
+        if ~exist('cmperpix','var') || isempty(cmperpix)
+            cmperpix  = ry_deeplabcut.cmperpix(dayDir, Info.directDir, animal, ...
+                sessionNum, 'CMB', 'useAverageOfSessions', sessionAverages)
         end
         ry_deeplabcut.createNQRawPosFiles(dayDir, Info.directDir,  animal, sessionNum,...
         'tableOutputDir', fullfile(Info.directDir,'deepinsight'),...
@@ -232,6 +235,9 @@ for sessionNum = daySequence
     % Barriers and objects
     % --------------------
     if dobarriers
+        % Have yet to write any code for this
+        % Could do brightness detection (binary) on roi lines drawn over
+        % the barriers
     end
    
     % ----------------------
@@ -239,6 +245,7 @@ for sessionNum = daySequence
     % ----------------------
     if dospiking
         tet_options = ry_ml_tetoption(unique(areas), tetList);
+        tetsubset = cellfun(x(ismember(x,tetsubset)), tetList)
         ml_process_animal(animal, Info.rawDir,...
             'dataDir',       Info.directDir,    ...
             'dayDirs',       dayDir,           ...
@@ -247,12 +254,15 @@ for sessionNum = daySequence
             'pat',           mdaFolder_regExp, ...
             'extractmarks',  extractmarks,             ...
             'overwrite', overwriteMoutainSort, ...
+            'tet_list', tetsubset, ...
             'tet_options', tet_options);
 
-        convert_ml_to_FF_withMultiunitAndMarks(animal, ...
-            fullfile(Info.directDir, ...
-            'MountainSort', sprintf('%s_%02d.mountain',animal,sessionNum)), ...
+        ms_store = fullfile(Info.directDir, 'MountainSort',...
+                            sprintf('%s_%02d.mountain',animal,sessionNum))
+        convert_ml_to_FF_withMultiunitAndMarks(animal, ms_store, ...
             sessionNum, 'tet_options', tet_options, 'overwrite', true);
+        cellLib.update.cells(animal,     'index', sessionNum)
+        cellLib.update.multiunit(animal, 'index', sessionNum)
 
         % Describe tetrodes
         % -----------------
@@ -272,7 +282,8 @@ for sessionNum = daySequence
     % ---------------------------------- 
     % Dependencies : requieres tetrode information 
     if dodecode
-        rawLib.create.deepinsightRaw(dayDir, animal, sessionNum, 'transpose', true);
+        rawLib.create.deepinsightRaw(dayDir, animal, sessionNum,...
+            'transpose', true);
         rawLib.append.behavior(animal, sessionNum,...
             'egocentric', [],...
             'tasktype', 'run',...
@@ -294,7 +305,7 @@ for sessionNum = daySequence
         util.rsync.rawpull(animal, dayDirs{sessionNum+direction}, 'sessionNum', sessionNum+direction, rsync_kws{:}); % pull the next day of data
     end
 
-end
+%end
 keyboard
 
 %% ===================================
@@ -308,8 +319,8 @@ disp('Creating/updating cell & tet info structures')
 tetrode.update.tetinfo(Info.directDir,  animal);
 cellLib.create.cellinfo(Info.directDir, animal); 
 cellLib.create.multiinfo(Info.directDir, animal); 
-coding.make.info_table(animal, 'cellinfo');
-coding.make.info_table(animal, 'tetinfo');
+coding.table.info(animal, 'cellinfo');
+coding.table.info(animal, 'tetinfo');
 
 % -------------------
 % LFP post-processing

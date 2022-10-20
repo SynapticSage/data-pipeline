@@ -1,4 +1,4 @@
-function cells(animal,fileprefix,varargin)
+function cells(animal, varargin)
 % createcellinfostruct(animal,fileprefix)
 % createcellinfostruct(animal,fileprefix,append)
 %
@@ -8,10 +8,13 @@ function cells(animal,fileprefix,varargin)
 %
 % MCZ ADD- If day unclustered, make NaNs
 %
-% RYan updated to add mountainsort metrics to cell AND add tetinfo to each cell
+%
+% Ryan - modernized to ndb framework, enhanced append capability (more
+% intelligent), added mountainsort metrics, added tetinfo to cells
 
 ip = inputParser;
-ip.addArgument('index',[]); % if not given, performs this for all spikes files found
+ip.addParameter('index',[]); % if not given, performs this for all spikes files found
+ip.addParameter('append',true,@islogical) % if not given, performs this for all spikes files found
 ip.parse(varargin{:});
 Opt = ip.Results;
 
@@ -19,10 +22,10 @@ cellinfo = [];
 if Opt.append && ndbFile.exist(animal, 'cellinfo')
     cellinfo = ndb.load(animal,  'cellinfo');
 end
-tetinfo = ndb.load(fileprefix, "tetinfo");
-spikefiles = ndb.files([animal,"spikes"], Opt.index);
+tetinfo = ndb.load(animal, "tetinfo");
+spikefiles = ndbFile.files([animal,"spikes"], Opt.index);
 for i = progress(1:length(spikefiles),'Title', 'Iterating spikes files')
-    load([animal, spikefiles(i).name]);
+    load(fullfile(spikefiles(i).folder, spikefiles(i).name));
     timerange = cellfetch(spikes, 'timerange');
     for j = 1:size(timerange.index,1)
         d = timerange.index(j,1);
@@ -68,7 +71,7 @@ for i = progress(1:length(spikefiles),'Title', 'Iterating spikes files')
             cellinfo{d}{e}{t}{c}.msID  = spikes{d}{e}{t}{c}.msID;
             if ~isempty(tet)
                 for field = string(fieldnames(tet))'
-                    cellinfo{d}{e}{t}{c}.(metric)  = tet.(field);
+                    cellinfo{d}{e}{t}{c}.(field)  = tet.(field);
                 end
             end
 
@@ -88,4 +91,4 @@ for i = progress(1:length(spikefiles),'Title', 'Iterating spikes files')
     end
 end
 
-save([animal,fileprefix,'cellinfo'],'cellinfo');
+ndb.save(cellinfo, animal, "cellinfo", 0)

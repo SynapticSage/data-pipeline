@@ -24,7 +24,6 @@ filt_out       = [tetResDir filesep 'filt.mda'];
 white_out      = [tetResDir filesep 'pre.mda'];
 raw_timeseries = [tetResDir filesep 'raw.mda.prv'];
 overwrite = 0;
-keyboard
 
 assignVars(varargin)
 

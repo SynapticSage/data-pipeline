@@ -21,6 +21,7 @@ if isempty(folders)
     error("folders empty!")
 end
 foldernames = string({folders.name});
+foldernames = foldernames(([folders.isdir]));
 foldernames = foldernames(contains(foldernames,'_'));
 
 if nargin < 2

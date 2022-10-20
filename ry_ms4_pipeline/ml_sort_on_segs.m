@@ -40,6 +40,8 @@ function out = ml_sort_on_segs(tetResDir,varargin)
     noise_overlap_thresh = 0.03;
     peak_snr_thresh = 1.5;
     extractmarks = false;
+    correct_drift_in_segment = false
+    start_segment=2
 
     % Automatic Filenames
     firings_out = [tetResDir filesep 'firings_raw.mda'];
@@ -107,21 +109,28 @@ function out = ml_sort_on_segs(tetResDir,varargin)
         end
 
         fprintf('\n------\nProcessing %s\nDetected %i epochs. Extracting and Sorting\n------\n',tetResDir,numel(epoch_offsets));
+        epoch_offset_subset = epoch_offsets(start_segment:end)
 
         % Split into epoch segments and sort
-        if numel(epoch_offsets)>1
-            epoch_timeseries = cell(numel(epoch_offsets),1);
-            epoch_firings = cell(numel(epoch_offsets),1);
-            for k=1:numel(epoch_offsets)
+        if numel(epoch_offset_subset)>1
+            epoch_timeseries = cell(numel(epoch_offset_subset), 1);
+            epoch_firings    = cell(numel(epoch_offset_subset), 1);
+            k=0;
+            for i = 1:numel(epoch_offsets)
+                if i < start_segment
+                    disp("...Skipping epoch " + string(i))
+                    continue
+                end
+                k=k+1;
 
                 % Extract epoch timeseries
-                t1 =  epoch_offsets(k);
-                if k==numel(epoch_offsets)
+                t1 =  epoch_offset_subset(k);
+                if k == numel(epoch_offset_subset)
                     t2 = total_samples-1;
                 else
-                    t2 = epoch_offsets(k+1)-1;
+                    t2 = epoch_offset_subset(k+1)-1;
                 end
-                fprintf('\n------\nExtracting epoch %i/%i. Time: %0.2f s - %0.2f s\n------\n',k,numel(epoch_offsets),t1/samplerate,t2/samplerate);
+                fprintf('\n------\nExtracting epoch %i/%i. Time: %0.2f s - %0.2f s\n------\n',k,numel(epoch_offset_subset),t1/samplerate,t2/samplerate);
                 tmp_timeseries = sprintf('%s%spre-%02i.mda',tetResDir,filesep,k);
                 extractInputs.timeseries = timeseries;
                 extractOutputs.timeseries_out = tmp_timeseries;
@@ -130,7 +139,7 @@ function out = ml_sort_on_segs(tetResDir,varargin)
                 epoch_timeseries{k} = tmp_timeseries;
 
                 % Sort epoch segment
-                fprintf('\n------\nSorting epoch %i/%i. Paramters:\n\tadjacency_radius:%g\n\tdetect_sign:%i\n\tdetect_threshold:%g\n\tsamplerate:%g\n\tgeom: %s\n------\n',k,numel(epoch_offsets),adjacency_radius,detect_sign,detect_threshold,samplerate,geomStr);
+                fprintf('\n------\nSorting epoch %i/%i. Paramters:\n\tadjacency_radius:%g\n\tdetect_sign:%i\n\tdetect_threshold:%g\n\tsamplerate:%g\n\tgeom: %s\n------\n',k,numel(epoch_offset_subset),adjacency_radius,detect_sign,detect_threshold,samplerate,geomStr);
                 tmp_firings = sprintf('%s%sfirings-%02i.mda',tetResDir,filesep,k);
                 sortInputs.timeseries = tmp_timeseries;
                 if ~isempty(geom)
@@ -139,6 +148,21 @@ function out = ml_sort_on_segs(tetResDir,varargin)
                 sortOutputs.firings_out = tmp_firings;
                 ml_run_process('ms4alg.sort',sortInputs,sortOutputs,sortParams);
                 epoch_firings{k} = tmp_firings;
+
+                % Correct for segment drift?
+                if correct_drift_in_segment
+                    fprintf('\n------\nSegment drift correct epoch %i/%i. Paramters:\n\tadjacency_radius:%g\n\tdetect_sign:%i\n\tdetect_threshold:%g\n\tsamplerate:%g\n\tgeom: %s\n------\n',k,numel(epoch_offset_subset),adjacency_radius,detect_sign,detect_threshold,samplerate,geomStr);
+                    input_firings = sprintf('%s%sfirings-%02i.mda',tetResDir,filesep,k);
+                    tmp_firings = sprintf('%s%sfirings-%02i-drift.mda',tetResDir,filesep,k);
+                    driftInputs.timeseries = tmp_timeseries;
+                    driftInputs.firings = input_firings;
+                    driftOutputs.firings_out = tmp_firings;
+                    ml_run_process('pyms.handle_drift_in_segment',driftInputs,driftOutputs);
+                    %command = sprintf('/home/ryoung/miniconda3/envs/mountainlab/bin/python3 /home/ryoung/.mountainlab/packages/franklab_msdrift/drift.py pyms.handle_drift_in_segment --timeseries=%s --firings=%s --firings_out=%s', driftInputs.timeseries, driftInputs.firings, driftOutputs.firings_out)
+                    %system(command) 
+                    movefile(tmp_firings, input_firings)
+                end
+
             end
 
             % Anneal segments
@@ -147,7 +171,7 @@ function out = ml_sort_on_segs(tetResDir,varargin)
             annealInputs.timeseries_list = epoch_timeseries;
             annealInputs.firings_list = epoch_firings;
             annealOutputs.firings_out = firings_out;
-            offsetStr = sprintf('%i,',epoch_offsets);
+            offsetStr = sprintf('%i,',epoch_offset_subset);
             offsetStr = offsetStr(1:end-1);
             annealParams.time_offsets = offsetStr;
             % useless outputs, but required for process to run (errors if left empty)
@@ -220,9 +244,9 @@ function out = ml_sort_on_segs(tetResDir,varargin)
     end
 
     % delete epoch segment files
-    if numel(epoch_offsets)>1
+    if numel(epoch_offset_subset)>1
         fprintf('\n------\nDeleting temporary segment mda file\n----\n')
-        for k=1:numel(epoch_offsets)
+        for k=1:numel(epoch_offset_subset)
             delete(epoch_timeseries{k})
             delete(epoch_firings{k})
         end

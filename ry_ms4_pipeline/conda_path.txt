@@ -1,1 +1,2 @@
-/home/ryoung/anaconda3/etc/profile.d/conda.sh
+/home/ryoung/miniconda3/etc/profile.d/conda.sh
+

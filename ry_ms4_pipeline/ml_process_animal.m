@@ -146,7 +146,6 @@ maskErrors = zeros(numel(resDirs),1);
 %warning(['K0 = ' num2str(k0)]);
 k0 = 1;
 for k=k0:numel(resDirs)
-    keyboard
 
     rD = resDirs{k};
 

@@ -47,7 +47,10 @@ if ~isempty(dataDir) && Opt.skipProc
     cmperpix = cellfetch(rawpos, 'cmperpixel');
     if ~isempty(cmperpix.index)
         cmperpix = cmperpix.values{1};
-        return;
+        if ~isempty(cmperpix)
+            return;
+        end
+
     end
 
     % For a cmperpix file
@@ -86,6 +89,9 @@ nEpochs = size(epochTimes,1);
 %%%%%%%%%%%%%%%%%%%%
 videoNumber = 1;
 video= [rawDir filesep '*' fileNameMask '*.mp4'];
+if isstring(video)
+    video = strjoin(video,"");
+end
 video = dir(video);
 videoNames = cellfun(@(x) replace(x,'.mp4',''), {video.name},'UniformOutput',false);
 nMatchingEpochs = sum(ismember(videoNames, epochNames));
@@ -127,7 +133,7 @@ while isempty(known)
     action   = "Redraw";
 
     while keepLine ~= "Yes" && action  == "Redraw"
-        [x, y]= ginputc(2,'ShowPoints',true,...
+        [x, y]= ry_deeplabcut.ginputc(2,'ShowPoints',true,...
             'ConnectPoints',true,...
             'Color',[1 1 1],...
             'LineStyle','-');
