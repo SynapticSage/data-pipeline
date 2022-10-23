@@ -26,12 +26,23 @@ elseif tableFile.endsWith(["xls","xlsx"])
     charTypes = cellfun(@(x) isequal(x,'char'), SheetOpt.VariableTypes);
     SheetOpt.VariableTypes(charTypes) = {'string'};
     T = readtable(tableFile, SheetOpt);
+elseif tableFile.endsWith("notes")
+    files = dir(tableFile);
+    T = [];
+    for file = files'
+        tableFile = fullfile(file.folder, file.name);
+        opt = delimitedTextImportOptions();
+        opt.Delimiter = '\t';
+        opt.VariableTypes = "string";
+        t = readtable(tableFile,opt);
+        error("not a finished method")
+    end
 else
     error("Improper table file type")
 end
 
 %% Add epoch data to each trodes comments file
-task = ndBranch.load('RY16','task', 'indices', sessionNum);
+task = ndBranch.load(animID,'task', 'indices', sessionNum);
 indices = ndBranch.indicesMatrixForm(task);
 if isempty(indices)
     error('no data point')

@@ -34,7 +34,7 @@ if opt.assumeMazeFilesSame == POSSIBLY_SAME
     M = M(~arrayfun(@nd.isEmpty, M));
     M = {M.dio}; % we only want to know if dio mappping stays const
     %M = num2cell(M);
-    if isequal( M{:} )
+    if numel(M) == 1 || isequal( M{:} )
         disp('...maze files are the same...')
         opt.assumeMazeFilesSame  = SAME;
     else
@@ -86,9 +86,10 @@ for index = indices'
         prog.printMessage('Obtaining home region from mode of cue leds')
         dio = dioLib.tagDioWithCallback(dio);
         [maze.platform.home, maze.platform.arena] = dioLib.estimateHome(dio, maze);
-    end
 
-    % Tag dio information
+    end
+    dio = dio(~isnan(dio.num),:);
+     % Tag dio information
     dio = dioLib.tagDioWithCallback(dio, maze);
 
     % Save diotable

@@ -24,7 +24,7 @@ if nargin > 1
     label    = strings(height(dio), 1);
     platform = zeros(height(dio), 1, 'uint8');
     region   = strings(height(dio), 1);
-    for field = string(fieldnames(maze.dio))'
+    for field = setdiff(string(fieldnames(maze.dio)),["possible_barrier_configurations", "leds_negative", "cue_negative"])'
         toLabel = ismember(dio.num, maze.dio.(field));
         label(toLabel) = field;
         I = bsxfun(@eq, maze.dio.(field), dio.num(toLabel));

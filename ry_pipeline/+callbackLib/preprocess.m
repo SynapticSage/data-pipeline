@@ -61,11 +61,12 @@ for file = dir('*.mat')'
     name.epoch   = str2double(name.epoch);
     if ~isempty(opt.mapping)
         prog.printMessage('change')
-        name.session = opt.mapping(sessions == name.session);
+        name.session = opt.mapping(str2double(sessions) == str2double(name.session));
     else
-        name.session = find(sessions == name.session);
+        name.session = find(str2double(sessions) == str2double(name.session));
     end
-
+    disp("Result of regular expression:")
+    util.struct.printstruct(name)
     % Load up the matfile contents, correct the time, and place it into the structure
     try
         match_file = fullfile(file.folder, file.name);
@@ -77,6 +78,13 @@ for file = dir('*.mat')'
         %file_exists = true;
         cnt = cnt+1;
     catch ME
+        if ~isnumeric(name.session) || ~isnumeric(name.epoch) || ...
+                isnan(name.session) || isnan(name.epoch)
+            disp("Skipping")
+            disp(name)
+            disp(file)
+            continue
+        end
         prog.printMessage('Exception caught')
         callback{name.session}{name.epoch} = [];
         %file_exists = false;
@@ -87,16 +95,12 @@ for file = dir('*.mat')'
     if isstring(name)
         name = name.join('');
     end
-
-    % Save callback structure
-    callbackFile = fullfile(fixed_folder, sprintf('%s%s%02d-%02d.mat', animalid, 'callback', name.session, name.epoch));
-    save(callbackFile, 'callback')
     
 end
 
 fprintf('%d callbacks processed\n', cnt);
-save(fullfile(fixed_folder, [filesep animalid 'callback' '.mat']), ...
-     'callback')
+ndb.save(callback, animalid, "callback", 1)
+ndb.save(callback, animalid, "callback", 0)
 
 % --------------------------------------------------
 function R = regular_expression(name)

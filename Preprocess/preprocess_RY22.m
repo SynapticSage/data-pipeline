@@ -105,9 +105,13 @@ end
 if doprocessmaze
     matfileDirectory =  fullfile(Info.expDir, 'matlab');
     % Matlab files sometimes have gui objects that make them unloadable: delete those
+    % note : pay no mind to the error messages -- they're from a complicated
+    % mathworks company gui code that I cannot silence -- nothing on
+    % stackoverflow about it. the error message has no effect on the output.
     matfileLib.sanitizeDirectory(matfileDirectory);
     % Create callback data struct
-    callbackLib.preprocess(Info.directDir, matfileDirectory, animal, dayDirs(dayStart:direction:dayStop),...
+    callbackLib.preprocess(Info.directDir, matfileDirectory, animal, ...
+        dayDirs(dayStart:direction:dayStop),...
         'mapping', sessionIndex(dayStart:direction:dayStop))
     % Generate maze files from callback files
     % (these store the meanings of the DIOs for the given experiment)
@@ -206,9 +210,8 @@ sessionNum = 21; disp(dayDirs{sessionNum})
                                     'coordprogram', @getcoord_gmaze,...
                                     'tryAverageOfSessions', sessionAverages,...
                                     'overwrite',  false);
-        taskSheet = fullfile(Info.expDir, 'ry22.xlsx');
-        taskLib.taskPropFromExcelSheet(dayDir, animal, taskSheet, sessionNum,...
-            'dayFromDayDir', true);
+        taskLib.taskPropFromNotesFiles(dayDir, animal, sessionNum);
+        %taskLib.taskPropFromExcelSheet(dayDir, animal, Info.taskSheet, sessionNum, 'dayFromDayDir', true);
 
         % DIO dependencies -> exportDIO or .stateScriptLog
         % ------------------------------------------------
@@ -219,9 +222,16 @@ sessionNum = 21; disp(dayDirs{sessionNum})
             %                                    'applyCorrection', true, ...
             %                                    'tableOutputDir', fullfile(Info.directDir,'diofix'))
             dioLib.create.diotable(animal, sessionNum);                             
-            register.offsetDio(animal, sessionNum, 'interactive', false)
         else
-            mcz_createNQDIOFiles(dayDir, Info.directDir, animal, sessionNum)
+            % THIS DOESN"T WORK UNLESS CONFIG FILE GIVES ALL OF THE DIOS
+            mcz_createNQDIOFiles(dayDir, Info.directDir, animal, sessionNum);
+            ndbFile.renameStruct(animal,"DIO","DIO","dio"); % make struct field match file name
+            % this requires maze files that specify definitions of the dio
+            dioLib.create.diotable(animal, sessionNum);                             
+        end
+        diocorrection = false;
+        if diocorrection
+            register.offsetDio(animal, sessionNum, 'interactive', false);
         end
 
         %======== Higher order trial information ========
@@ -339,7 +349,7 @@ if any(configurationUnreferenced)
     % refData -- an E x N matrix with the local reference for each tetrode
     %            where unused tetrodes have a ref of zero.
     refData = zeros(nEpochs,nTets);
-    for i=1:numel(tetList),
+    for i=1:numel(tetList)
         refData(:,tetList{i}) = refList{sessionNum}(i);
     end
          

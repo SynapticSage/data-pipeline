@@ -30,7 +30,7 @@ if Opt.persist && isequal(videoFile, cacheVideoFile) && ~isempty(obj)
 elseif exist(videoFile,'file')
     %disp('new load')
     obj = VideoReader(videoFile, Opt.kws{:}); % Open new object
-    cacheVideoFile = DataHash(videoFile);
+    cacheVideoFile = DataHash(char(videoFile));
     OBJ = obj;
 else
     error("Video " + videoFile + " not found");
