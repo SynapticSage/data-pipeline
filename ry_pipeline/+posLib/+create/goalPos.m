@@ -57,6 +57,7 @@ for index = progress(indices','Title','Create egocentric pos')
 
     day   = index(1);
     epoch = index(2);
+    tsk = ndb.get(task, index);
     p  =  ndb.get(pos, index);
     t  =  traj(traj.day == day,:);
     event  =  events(events.day == day,:);
@@ -65,7 +66,7 @@ for index = progress(indices','Title','Create egocentric pos')
         event  =  events(events.day == day,:);
     end
 
-    if  height(t)  == 0
+    if  height(t)  == 0 && tsk.task ~= "forage"
         warning('Day %d Epoch %d is empty', day, epoch);
         continue
     end
@@ -85,24 +86,26 @@ for index = progress(indices','Title','Create egocentric pos')
 
     % Get list of current wells animal moving toward vs time
     posTime = p.data(:,1);
-    t(isnan(t.stop),:) = []; % Drop any nan entries
-    startWell = t.source;
-    startTime = t.start;
-    stopWell  = t.target;
-    stopTime  = t.stop;
-    startWell   = interp1(startTime, single(startWell), posTime, 'previous');
-    stopWell    = interp1(stopTime,  single(stopWell),  posTime, 'next');
-    e.startWell = startWell; % CHANGE
-    e.stopWell  = stopWell;  % CHANGE
+    if tsk.task ~= "forage"
+        t(isnan(t.stop),:) = []; % Drop any nan entries
+        startWell = t.source;
+        startTime = t.start;
+        stopWell  = t.target;
+        stopTime  = t.stop;
+        startWell   = interp1(startTime, single(startWell), posTime, 'previous');
+        stopWell    = interp1(stopTime,  single(stopWell),  posTime, 'next');
+        e.startWell = startWell; % CHANGE
+        e.stopWell  = stopWell;  % CHANGE
 
-    % Set all stopWell and startWell times to nan outside of blocks
-    insideBlock = isIncluded(posTime, [t.start, t.stop]);
-    e.startWell = e.startWell .* insideBlock;
-    e.stopWell  = e.stopWell  .* insideBlock;
-    e.startWell = fillmissing(e.startWell, 'constant', -1);
-    e.stopWell  = fillmissing(e.stopWell,  'constant', -1);
-    e.startWell(e.startWell == 0) = -1;
-    e.stopWell(e.stopWell   == 0) = -1;
+        % Set all stopWell and startWell times to nan outside of blocks
+        insideBlock = isIncluded(posTime, [t.start, t.stop]);
+        e.startWell = e.startWell .* insideBlock;
+        e.stopWell  = e.stopWell  .* insideBlock;
+        e.startWell = fillmissing(e.startWell, 'constant', -1);
+        e.stopWell  = fillmissing(e.stopWell,  'constant', -1);
+        e.startWell(e.startWell == 0) = -1;
+        e.stopWell(e.stopWell   == 0) = -1;
+    end
 
     %%  EGOCENTRIC ANGLES
     % time along rows and well property along columns
@@ -143,109 +146,111 @@ for index = progress(indices','Title','Create egocentric pos')
     velVec(angleDiff > pi/2) = 0;
     velVec_smooth(abs(velVec) < 3 & smoothAngleDiff > pi/2) = nan;
 
-    % Compute goal vector as the difference between each well posoition and animal position at all times
-    goalVec  = wellVec - animVec; % broadcasts
-    gFilt = abs(goalVec) < 0.5; % any times animal less than 1cm from well
-    goalVec(gFilt) = 0 ; % Zero any measurements wehre animal too close to reference point
-    headEgoAngle = mod(angle(goalVec)-angle(headVec)+pi,2*pi)-pi;
-    egoAngle     = mod(angle(goalVec)-angle(velVec_smooth)+pi,2*pi)-pi;
-    egoEuc   = abs(goalVec);
+    if tsk.task ~= "forage"
+        % Compute goal vector as the difference between each well posoition and animal position at all times
+        goalVec  = wellVec - animVec; % broadcasts
+        gFilt = abs(goalVec) < 0.5; % any times animal less than 1cm from well
+        goalVec(gFilt) = 0 ; % Zero any measurements wehre animal too close to reference point
+        headEgoAngle = mod(angle(goalVec)-angle(headVec)+pi,2*pi)-pi;
+        egoAngle     = mod(angle(goalVec)-angle(velVec_smooth)+pi,2*pi)-pi;
+        egoEuc   = abs(goalVec);
 
-    %e.vec   = egoVec;
-    e.goalVec = goalVec;
-    e.velVec  = velVec_smooth;
-    e.headVec = headVec;
-    e.egoVec            = egoEuc .* exp(1i * egoAngle);
-    e.angle             = egoAngle;
-    e.headEgoAngle             = headEgoAngle;
-    e.euclidianDistance = egoEuc; %CHANGE
+        %e.vec   = egoVec;
+        e.goalVec = goalVec;
+        e.velVec  = velVec_smooth;
+        e.headVec = headVec;
+        e.egoVec            = egoEuc .* exp(1i * egoAngle);
+        e.angle             = egoAngle;
+        e.headEgoAngle             = headEgoAngle;
+        e.euclidianDistance = egoEuc; %CHANGE
 
-    % Times where animals nose in a poke (we do not want angles in this time
-    % nor do we want to integrate velocity for distanc traveled if nose in a
-    % poke. points wiggle even when animal is still, generating significant
-    % path-integration drift)
-    pokeEngagement = event(event.type == "poke",:).time;
-    pokeEngagement = [pokeEngagement, pokeEngagement + event(event.type == "poke",:).duration];
-    pokeEngagement = isIncluded(e.postime, pokeEngagement);
+        % Times where animals nose in a poke (we do not want angles in this time
+        % nor do we want to integrate velocity for distanc traveled if nose in a
+        % poke. points wiggle even when animal is still, generating significant
+        % path-integration drift)
+        pokeEngagement = event(event.type == "poke",:).time;
+        pokeEngagement = [pokeEngagement, pokeEngagement + event(event.type == "poke",:).duration];
+        pokeEngagement = isIncluded(e.postime, pokeEngagement);
 
-    % COMPUTE PATH arc lengths
-    vx = real(velVec);
-    vy = imag(velVec);
-    V = sqrt(vx.^2 + vy.^2);
-    V = fillmissing(V, 'previous');
-    pathLength = nan(size(x));
-    maxPathLength = nan(size(x));
-    pathX = cell(1,height(t));
-    pathY = cell(1,height(t));
-    trialTimes = zeros(height(t),2);
-    for row = 1:height(t)
-        start =t.start(row);
-        stop = t.stop(row);
-        filt = time >= start &  time < stop & ~pokeEngagement;
-        %pathLength(filt) = cumsum(sqrt(1 + V(filt).^2) .* dt(filt));  %\int_a^b sqrt( 1 + dx/dt ) * dt
-        P = cumsum(V(filt) .* dt(filt));  %\int_a^b sqrt( 1 + dx/dt ) * dt
-        P = max(P) - P;
-        pathLength(filt) = P;
-        maxPathLength(filt) = repmat(max(P), size(P));
-        pathX{row} = x(filt);
-        pathY{row} = y(filt);
-        trialTimes(row,1) = start;
-        trialTimes(row,2) = stop;
-    end
-    e.currentPathLength = pathLength;
-    e.currentPathLengthMax = maxPathLength;
-    e.pathX = pathX;
-    e.pathY = pathY;
-    e.trialTimes = trialTimes;
-
-    e.currentAngle   = nan(size(posTime));
-    e.currentEucDist = nan(size(posTime));
-    e.currentGoalVec = nan(size(posTime));
-    e.currentEgoVec  = nan(size(posTime));
-    e.currentHeadEgoAngle = nan(size(posTime));
-    for ii = 1:numel(posTime)
-        if e.stopWell(ii) ~= -1 && ~pokeEngagement(ii)
-            e.currentEgoVec(ii)       = e.egoVec(ii,            e.stopWell(ii));
-            e.currentAngle(ii)        = e.angle(ii,             e.stopWell(ii));
-            e.currentHeadEgoAngle(ii) = e.headEgoAngle(ii,      e.stopWell(ii));
-            e.currentEucDist(ii)      = e.euclidianDistance(ii, e.stopWell(ii));
-            e.currentGoalVec(ii)      = e.goalVec(ii,           e.stopWell(ii));
+        % COMPUTE PATH arc lengths
+        vx = real(velVec);
+        vy = imag(velVec);
+        V = sqrt(vx.^2 + vy.^2);
+        V = fillmissing(V, 'previous');
+        pathLength = nan(size(x));
+        maxPathLength = nan(size(x));
+        pathX = cell(1,height(t));
+        pathY = cell(1,height(t));
+        trialTimes = zeros(height(t),2);
+        for row = 1:height(t)
+            start =t.start(row);
+            stop = t.stop(row);
+            filt = time >= start &  time < stop & ~pokeEngagement;
+            %pathLength(filt) = cumsum(sqrt(1 + V(filt).^2) .* dt(filt));  %\int_a^b sqrt( 1 + dx/dt ) * dt
+            P = cumsum(V(filt) .* dt(filt));  %\int_a^b sqrt( 1 + dx/dt ) * dt
+            P = max(P) - P;
+            pathLength(filt) = P;
+            maxPathLength(filt) = repmat(max(P), size(P));
+            pathX{row} = x(filt);
+            pathY{row} = y(filt);
+            trialTimes(row,1) = start;
+            trialTimes(row,2) = stop;
         end
-    end
+        e.currentPathLength = pathLength;
+        e.currentPathLengthMax = maxPathLength;
+        e.pathX = pathX;
+        e.pathY = pathY;
+        e.trialTimes = trialTimes;
 
-    % Add cuememory state
-    cuemem = t.cuemem;
-    [~,~,e.cuemem] = unique(cuemem);
-    e.cuemem = interp1(startTime, e.cuemem, posTime, 'previous');
-    e.cuemem = e.cuemem .* insideBlock;
-    e.cuemem = e.cuemem - 1;
-    e.cuemem = fillmissing(e.cuemem, 'constant', -1);
-    % Correct versus error state
-    correct   = t.correct;
-    correct     = interp1(stopTime,  single(correct),   posTime, 'next');
-    correct = (correct+1) .* insideBlock;
-    correct = correct - 1;
-    e.correct = fillmissing(correct, 'constant', -1);
-    % Region
-    [~,~,region]    = unique(t.region);
-    region     = interp1(stopTime,  single(region),   posTime, 'next');
-    region = (region) .* insideBlock;
-    region = region - 1;
-    e.region = fillmissing(region, 'constant', -1);
-
-    for field = string(fieldnames(e))'
-        if isa(e.(field),'double')
-            e.(field) = single(e.(field));
+        e.currentAngle   = nan(size(posTime));
+        e.currentEucDist = nan(size(posTime));
+        e.currentGoalVec = nan(size(posTime));
+        e.currentEgoVec  = nan(size(posTime));
+        e.currentHeadEgoAngle = nan(size(posTime));
+        for ii = 1:numel(posTime)
+            if e.stopWell(ii) ~= -1 && ~pokeEngagement(ii)
+                e.currentEgoVec(ii)       = e.egoVec(ii,            e.stopWell(ii));
+                e.currentAngle(ii)        = e.angle(ii,             e.stopWell(ii));
+                e.currentHeadEgoAngle(ii) = e.headEgoAngle(ii,      e.stopWell(ii));
+                e.currentEucDist(ii)      = e.euclidianDistance(ii, e.stopWell(ii));
+                e.currentGoalVec(ii)      = e.goalVec(ii,           e.stopWell(ii));
+            end
         end
+
+        % Add cuememory state
+        cuemem = t.cuemem;
+        [~,~,e.cuemem] = unique(cuemem);
+        e.cuemem = interp1(startTime, e.cuemem, posTime, 'previous');
+        e.cuemem = e.cuemem .* insideBlock;
+        e.cuemem = e.cuemem - 1;
+        e.cuemem = fillmissing(e.cuemem, 'constant', -1);
+        % Correct versus error state
+        correct   = t.correct;
+        correct     = interp1(stopTime,  single(correct),   posTime, 'next');
+        correct = (correct+1) .* insideBlock;
+        correct = correct - 1;
+        e.correct = fillmissing(correct, 'constant', -1);
+        % Region
+        [~,~,region]    = unique(t.region);
+        region     = interp1(stopTime,  single(region),   posTime, 'next');
+        region = (region) .* insideBlock;
+        region = region - 1;
+        e.region = fillmissing(region, 'constant', -1);
+
+        for field = string(fieldnames(e))'
+            if isa(e.(field),'double')
+                e.(field) = single(e.(field));
+            end
+        end
+
+        e.poke = posLib.poke.getMatrix(animal, dayepoch, e.postime, "input", "poke");
+        e.milk = posLib.poke.getMatrix(animal, dayepoch, e.postime, "output", "reward");
     end
 
-    e.poke = posLib.poke.getMatrix(animal, dayepoch, e.postime, "input", "poke");
-    e.milk = posLib.poke.getMatrix(animal, dayepoch, e.postime, "output", "reward");
     e.description = description;
-
     egopos = ndb.set(egopos, index, e);
 
-    if Opt.ploton
+    if Opt.ploton && tsk.task ~= "forage"
         tic
         fig(sprintf('GOALPOS Day %d Epoch %d',day,epoch))
         clf

@@ -6,7 +6,6 @@ ip.parse(varargin{:});
 opt = ip.Results;
 
 
-keyboard
 notesfiles = dir(fullfile(dayDir, string(animID) + "_" + sessionNum + "*.notes"));
 
 %% Add epoch data to each trodes comments file

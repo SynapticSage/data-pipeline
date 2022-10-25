@@ -24,9 +24,12 @@ D = ndBranch.load(animal, 'diotable',...
 events = table(); % 
 [groups,uDays,uEpochs] = findgroups(D.day, D.epoch);
 uDayEpoch = [uDays,uEpochs];
+disp("uDays uEpochs")
+disp(unique(uDayEpoch, 'rows'))
 if ~isempty(dayepoch)
     m = min(size(dayepoch,2), 2);
 end
+keyboard
 for g = unique(groups)'
     
     if ~isempty(dayepoch) && ~ismember(uDayEpoch(g,1:m), dayepoch(:,1:m), 'rows')

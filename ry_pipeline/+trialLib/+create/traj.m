@@ -31,6 +31,8 @@ prevpokedur = 0;
 trialCount  = 0;
 events = sortrows(events,["day","epoch","time"]);
 [groups, uDays, uEpochs] = findgroups(events.day, events.epoch, events.block);
+disp("Days epochs:")
+disp(unique([uDays uEpochs], 'rows'))
 uDayEpoch = [uDays,uEpochs];
 m = min(size(dayepoch,2), 2);
 prevPokeAndRewardTime = 0;

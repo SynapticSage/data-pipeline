@@ -41,6 +41,7 @@ addpath(genpath('~/Code/pipeline'))
 addpath(genpath('~/Code/projects/goalmazebehavior'))
 addpath(genpath('/Volumes/MATLAB-Drive/linearized'))
 addpath('~/Code')
+addpath(genpath('~/Code/src_matlab/ry_Utility'))
 
 % ---------------------
 % Animal specific files
@@ -104,9 +105,7 @@ end
 %% ===================================================
 if doprocessmaze
     matfileDirectory =  fullfile(Info.expDir, 'matlab');
-    % Matlab files sometimes have gui objects that make them unloadable: delete those
-    % note : pay no mind to the error messages -- they're from a complicated
-    % mathworks company gui code that I cannot silence -- nothing on
+    % Matlab files sometimes have gui objects that make them unloadable: delete those note : pay no mind to the error messages -- they're from a complicated mathworks company gui code that I cannot silence -- nothing on
     % stackoverflow about it. the error message has no effect on the output.
     matfileLib.sanitizeDirectory(matfileDirectory);
     % Create callback data struct
@@ -182,6 +181,63 @@ sessionNum = 21; disp(dayDirs{sessionNum})
     % LFP dependencies --> exportLFP
     if dolfp && (numel(dir(fullfile(dayDir, '*.LFP','*')))-2) > 0
         rn_createNQLFPFiles(dayDir, Info.directDir, animal, sessionNum);
+        % -------------------
+        % LFP post-processing
+        % -------------------
+        % Get number of epochs
+        cd(dayDir)
+        epochs = getEpochs(1);
+        nEpochs = size(epochs,1);
+
+        % ------------------------
+        % Reference EEG or rename?
+        % ------------------------
+        configurationUnreferenced = ~ry_getRefState('animal',animal);
+        cd(currDir)
+        if any(configurationUnreferenced)
+            % refData -- an E x N matrix with the local reference for each tetrode
+            %            where unused tetrodes have a ref of zero.
+            refData = zeros(nEpochs,nTets);
+            for i=1:numel(tetList)
+                %refData(:,tetList{i}) = refList{sessionNum}(i);
+                refData(:,tetList{i}) = refList{i};
+            end
+            mcz_createRefEEG(Info.rawDir, Info.directDir, animal, sessionNum, refData)
+        else
+            ry_renameEEGtoEEGref()
+        end
+        eegFiles    = ndbFile.exist(animal, 'eeg', day);
+        eegRefFiles = ndbFile.exist(animal, 'eegref', day);
+        if eegFiles % low frequency defaults to unreferenced
+            fprintf('Theta Filtering LFPs...\n')
+            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 0)
+            fprintf('Delta Filtering LFPs...\n')
+            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 0)
+        elseif eegRefFiles
+            fprintf('Theta Filtering LFPs...\n')
+            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 1)
+            fprintf('Delta Filtering LFPs...\n')
+            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
+        end
+        if eegRefFilesd % high frequency defaults to referenced
+            fprintf('Ripple Filtering LFPs...\n')
+            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 1)
+            rippletype = 'rippleref';
+        elseif eegFiles
+            fprintf('Ripple Filtering LFPs...\n')
+            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 0)
+            rippletype = 'ripple';
+        end
+        % generating ripple events
+        min_suprathresh_duration = 0.015;
+        nstd = 2;
+        lfpLib.create.generateSPWRevents(Info.directDir, animal, day, cat(2,tetList{1:3}), ...
+            min_suprathresh_duration, nstd,...
+            'rippletype', rippletype)
+        lfpLib.create.generateGlobalRipples(animal);
+        % and cortical ripples
+        lfpLib.create.generateGlobalRipples(animal, 'brainarea', 'PFC', 'name', 'rippletimepfc');
+
     end
 
     % --------
@@ -332,37 +388,3 @@ cellLib.create.multiinfo(Info.directDir, animal);
 coding.table.info(animal, 'cellinfo');
 coding.table.info(animal, 'tetinfo');
 
-% -------------------
-% LFP post-processing
-% -------------------
-% Get number of epochs
-cd(dayDir)
-epochs = getEpochs(1);
-nEpochs = size(epochs,1);
-
-% ------------------------
-% Reference EEG or rename?
-% ------------------------
-configurationUnreferenced = ~ry_getRefState('animal',animal);
-cd(currDir)
-if any(configurationUnreferenced)
-    % refData -- an E x N matrix with the local reference for each tetrode
-    %            where unused tetrodes have a ref of zero.
-    refData = zeros(nEpochs,nTets);
-    for i=1:numel(tetList)
-        refData(:,tetList{i}) = refList{sessionNum}(i);
-    end
-         
-    mcz_createRefEEG(Info.rawDir, Info.directDir, animal, sessionNum, refData)
-    filterDir = [fileparts(which('mcz_deltadayprocess.m')) filesep 'Filters' filesep];
-else
-    ry_renameEEGtoEEGref()
-end
-fprintf('Delta Filtering LFPs...\n')
-mcz_deltadayprocess(dayDir,  Info.directDir, animal, sessionNum, 'f', [filterDir 'deltafilter.mat'])
-fprintf('Gamma Filtering LFPs...\n')
-mcz_gammadayprocess(dayDir,  Info.directDir, animal, sessionNum, 'f', [filterDir 'gammafilter.mat'])
-fprintf('Ripple Filtering LFPs...\n')
-mcz_rippledayprocess(dayDir, Info.directDir, animal, sessionNum, 'f', [filterDir 'ripplefilter.mat'])
-fprintf('Theta Filtering LFPs...\n')
-mcz_thetadayprocess(dayDir,  Info.directDir, animal, sessionNum, 'f', [filterDir 'thetafilter.mat'])

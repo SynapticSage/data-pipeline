@@ -17,6 +17,10 @@ for ind = progress(indices', 'Title', 'Building task table')
     epoch = ndb.get(task, ind);
 
     x=[]; y=[]; name=[];
+    if ~isfield(epoch, 'maze')
+        warning("Epoch has no maze field -- probably a sleep session .. skipping")
+        continue
+    end
     for field = string(fieldnames(epoch.maze))'
         if isa(epoch.maze.(field),'double') && size(epoch.maze.(field),2) > 1
             x = [x; epoch.maze.(field)(:,1)];

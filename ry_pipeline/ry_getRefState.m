@@ -14,13 +14,14 @@ ip.parse(varargin{:})
 opt = ip.Results;
 
 if ~isempty(opt.animal)
-    info = animalinfo('RY16');
+    info = animalinfo(opt.animal);
     opt = util.struct.update(opt, info);
 end
 
 
 %  OBTAINING REFERENCE STATE FROM THE CONFIG FILE
 if opt.lfp % FROM LFP MAT FILES
+    disp("Using lfp check")
 
     % Obtain the referenced data
     lfp = ndb.load(opt.animal, 'eeg', 'inds',  opt.inds);
@@ -32,9 +33,10 @@ if opt.lfp % FROM LFP MAT FILES
         keyboard
     end
     referenced  = cat(1,referenced.values{:});
-    refState =  median(referenced);
+    refState =  referenced;
 
 elseif ~isempty(opt.configFile) && exist(opt.configFile,'file')
+    disp("Using referening check within configFile (refOn states)")
 
     [direct, cfFile, ext] = fileparts(opt.configFile);
     currDir = pwd;
@@ -45,7 +47,7 @@ elseif ~isempty(opt.configFile) && exist(opt.configFile,'file')
     attributes = {spikeNtrode.Attributes};
     refOn = cellfun(@(x) str2double(getfield(x,'refOn')), attributes);
 
-    refState = any(refOn);
+    refState = refOn;
 
 else
     error('Pleease provide configFile or configDir')
