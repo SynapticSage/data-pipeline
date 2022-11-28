@@ -66,24 +66,30 @@ for tet = attributes
 
     % Add tags from the grouping keys
     for key = Opt.keyDict.keys()
-        key=key{1};
+        key = key{1};
         searchTerm = Opt.keyDict(key);
         loc = strfind(tet.groupingTags, searchTerm);
-        assert(numel(loc)==1)
-        tagDelim = ';';
-        tags = strfind(tet.groupingTags, tagDelim);
-        tags = tags(tags>loc);
+        %assert(numel(loc)==1)
+        %tagDelim = ';';
+        %tags = strfind(tet.groupingTags, tagDelim);
+        %tags = tags(tags>loc);
         tetinfo(tetCnt).isRef = 0; % default value : references computed later in function
-        if loc ~= -1
-            if numel(tags)>0
-                areaTextRange = loc+numel(searchTerm):min(tags,numel(tet.groupingTags));
-            else
-                areaTextRange = loc+numel(searchTerm):numel(tet.groupingTags);
-            end
-            tetinfo(tetCnt).(key)  = string(tet.groupingTags(areaTextRange));
+        if ~isempty(loc)
+            keyCap = key; key(1) = upper(key(1));
+            delim = char(";" + string(keyCap) + "/");
+            areaTextRange = strsplit(tet.groupingTags, delim);
+            [~,idx] = max(cellfun(@length, areaTextRange));
+            txt = areaTextRange{idx};
+            %if numel(tags)>0
+            %    areaTextRange = loc+numel(searchTerm):min(tags,numel(tet.groupingTags));
+            %else
+            %    areaTextRange = loc+numel(searchTerm):numel(tet.groupingTags);
+            %end
+            tetinfo(tetCnt).(key)  = string(txt);
             tetinfo(tetCnt).(key)  = tetinfo(tetCnt).(key).erase(';');
         else
             tetinfo(tetCnt).(key)  = string(nan);
+            %error("key " + string(key) + " not found!")
         end
     end
     
