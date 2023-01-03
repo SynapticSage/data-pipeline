@@ -10,13 +10,11 @@ addpath(genpath('~/Code/Src_Matlab/ry_Utility'))
 %% Setup Extraction script
 % -------------- WHAT/WHERE TO PROCESS ------------------
 % Define animal directory and day directories to extract
-Info   = animalinfo(animal);
-%animalRawDir = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
-%animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
-animalRawDir    = Info.rawDir
-animalRawDirOut = Info.rawDir
-[dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir,...
-                                                     Info.rawFirstLabeledSession);
+animalRawDir = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+%animalRawDir    = '/Volumes/GenuDrive/RY16_fix'
+%animalRawDirOut = '/Volumes/GenuDrive/RY16_fix'
+[dayDirs, sessionList] = ry_selectDays('/Volumes/Calyx/RY16_fix/', 45, 69)
 
 % Define file prefixes, used to fix filenames in a day_dir and for creating
 % #FIX_FILENAMES
@@ -31,7 +29,7 @@ recOrder = ry_generateRecOrder(animalRawDir, dayDirs,...
     'skipNonexist', true)
            
 % -------------- WHAT TO EXPORT ------------------
-%exportTypes =       {'spikes'};
+exportTypes =       {'spikes'};
 %exportTypes =       {'mdaraw'};
 %exportTypes =       {'dio'};
 %exportTypes =       {'LFP', 'mda', 'time'};

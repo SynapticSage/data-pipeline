@@ -72,8 +72,8 @@ maxParallelJobs = 8;
 
 % Number of days
 nDays    = numel(dayDirs);
-dayStart = find(contains(dayDirs,'35_'));
-dayStop  = find(contains(dayDirs,'39_'));
+dayStart = find(contains(dayDirs,'34_'));
+dayStop  = find(contains(dayDirs,'34_'));
 
 % number of data types to export
 nExport = numel(exportTypes);

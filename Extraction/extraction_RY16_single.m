@@ -1,5 +1,4 @@
 %% Libaries!
-Plugin 'https://github.com/lazytanuki/nvim-mapper'
 %% ---------
 addpath(genpath('~/Code/pipeline/TrodesToMatlab'))
 addpath(genpath('~/Code/pipeline/SpikeGadgets'))
@@ -17,7 +16,8 @@ animalRawDir    = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_
 animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
 
 % Select folders starting from 45_ to 69_
-[dayDirs, sessionList] = ry_selectDays('/Volumes/Calyx/RY16_fix/', 45, 69) % Initial good data probably begins around day 45, even though recording started well before
+[dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir,...
+                                                     Info.rawFirstLabeledSession);
 
 % Define file prefixes, used to fix filenames in a day_dir and for creating
 prefixes = ["RY16_"] + string(sessionList)' + "_expDay" + compose("%02d",sessionList-min(sessionList)+1)';

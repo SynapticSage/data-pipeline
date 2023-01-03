@@ -91,7 +91,8 @@ if isempty(Opt.dayDirs)
                                            % day/session for _direct folder, -1
                                            % for skip
     % Compute the full paths
-    dayDirs = string({dayDirs.folder}) + filesep + string({dayDirs.name}) + filesep;
+    dayDirs = string({dayDirs.folder}) + filesep + string({dayDirs.name}) ...
+                                       + filesep;
 else
     dayDirs = string(Opt.dayDirs);                 % The day directory string names
     if Opt.daysToProcess

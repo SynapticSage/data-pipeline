@@ -55,7 +55,7 @@ expDir = fullfile(root);
 % ---------------------
 Info   = animalinfo(animal);
 [dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir,...
-                                                     Info.rawFirstSession);
+                                                     Info.rawFirstLabeledSession);
 % --------
 % Log file
 % --------
@@ -167,7 +167,7 @@ day = dayStart;
 for day = daySequence
 
     fprintf('PreProcessing %s Day %02i...\n',animal,day);
-    dayDir = fullfile(rawDir, dayDirs{day}); 
+    dayDir = fullfile(Info.rawDir, dayDirs{day}); 
 
     % ---------
     % Checksum 
@@ -310,37 +310,70 @@ for day = daySequence
     end
 
     if dolfp
-        eegFiles    = ndbFile.exist(animal, 'eeg', day);
+        rn_createNQLFPFiles(dayDir, Info.directDir, animal, sessionNum);
+        % -------------------
+        % LFP post-processing
+        % -------------------
+        % Get number of epochs
+        cd(dayDir)
+        epochs = getEpochs(1);
+        nEpochs = size(epochs,1);
+
+        % ------------------------
+        % Reference EEG or rename?
+        % ------------------------
+        cd(currDir)
+        configurationUnreferenced = ~ry_getRefState('animal',animal,'inds',day,'dataType','eeg');
+        %eegrefIsRef = ry_getRefState('animal',animal,'inds',day,'dataType','eegref');
+        refLabelIsCorrect = any(configurationUnreferenced);
+        unrefIsActuallyRef = ~any(configurationUnreferenced);
+        refFilesNotCreated = ~ndbFile.exist(animal, 'eegref', day);
+        if refLabelIsCorrect && refFilesNotCreated
+            % refData -- an E x N matrix with the local reference for each tetrode
+            %            where unused tetrodes have a ref of zero.
+            refData = zeros(nEpochs,nTets);
+            for i=1:numel(tetList)
+                %refData(:,tetList{i}) = refList{sessionNum}(i);
+                refData(:,tetList{i}) = refList{i};
+            end
+            mcz_createRefEEG(Info.rawDir, Info.directDir, animal, sessionNum, refData)
+        elseif unrefIsActuallyRef
+            ry_renameEEGtoEEGref()
+        end
+
+        % Make filtered files
+        eegFiles    = ndbFile.exist(animal, 'eeg',    day);
         eegRefFiles = ndbFile.exist(animal, 'eegref', day);
-        if eegFiles
-            fprintf('Ripple Filtering LFPs...\n')
-            mcz_rippledayprocess(dayDir, dataDir, animal, day, 'f', [filterDir 'ripplefilter.mat'])
+        if eegFiles % low frequency defaults to unreferenced
             fprintf('Theta Filtering LFPs...\n')
-            mcz_thetadayprocess(dayDir,  dataDir, animal, day, 'f', [filterDir 'thetafilter.mat'])
+            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 0)
+            fprintf('Delta Filtering LFPs...\n')
+            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 0)
         elseif eegRefFiles
             fprintf('Theta Filtering LFPs...\n')
-            mcz_thetadayprocess(dayDir,  dataDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 1)
+            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 1)
             fprintf('Delta Filtering LFPs...\n')
-            mcz_deltadayprocess(dayDir,  dataDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
+            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
         end
-        if eegRefFiles
+        if eegRefFiles % high frequency defaults to referenced
             fprintf('Ripple Filtering LFPs...\n')
-            mcz_rippledayprocess(dayDir, dataDir, animal, day, 'f', [filterDir 'ripplefilter.mat'])
+            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 1)
             rippletype = 'rippleref';
         elseif eegFiles
             fprintf('Ripple Filtering LFPs...\n')
-            mcz_rippledayprocess(dayDir, dataDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 0)
+            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 0)
             rippletype = 'ripple';
         end
         % generating ripple events
         min_suprathresh_duration = 0.015;
         nstd = 2;
-        lfpLib.create.generateSPWRevents(dataDir, animal, day, cat(2,tetList{1:3}), ...
+        lfpLib.create.generateSPWRevents(Info.directDir, animal, day, cat(2,tetList{1:3}), ...
             min_suprathresh_duration, nstd,...
             'rippletype', rippletype)
-        lfpLib.create.generateGlobalRipples('RY16');
+        lfpLib.create.generateGlobalRipples(animal);
         % and cortical ripples
-        lfpLib.create.generateGlobalRipples('RY16', 'brainarea', 'PFC', 'name', 'rippletimepfc');
+        lfpLib.create.generateGlobalRipples(animal, 'brainarea', 'PFC', 'name', 'rippletimepfc');
+
     end
     
     % -----------------------

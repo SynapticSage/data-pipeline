@@ -1,23 +1,24 @@
-        
 % ----------------
 % Preprocess steps
 % ----------------
 dospiking     = false;
 dolfp         = false;
-dobehavior    = true;
+dobehavior    = false;
 dobarriers    = false;
-dodecode      = true;
+dodecode      = false;
 domarks       = false; % if decode activate, puts marks into decode files
 dorsync       = false;
 doprocessmaze = false;
+dospikingcuration = true;
 
 % ----------------
 % Mountainsort controls and knobs
 % ----------------
 extractmarks         = false; % produce marks for marked point process?
-overwriteMoutainSort = true; % overwrite ms files?
+overwriteMoutainSort = false; % overwrite ms files?
 % Regular expression for finding mountainsort folders (if your naming differs, you can change this)
-mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_(?<overallDay>[0-9]{1,3})_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
+%mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_(?<overallDay>[0-9]{1,3})_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
+mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_?(?<overallDay>[0-9]{1,3})?_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
 
 % ---------------
 % Main parameters
@@ -156,13 +157,13 @@ if dorsync
     util.rsync.rawpull(animal, dayDirs{daySequence(1)}, 'sessionNum', dayStart, rsync_kws{:});
 end
 
-sessionNum = 1; disp(dayDirs{sessionNum})
+for sessionNum = 6:7; disp(dayDirs{sessionNum})
 %sessionNum = dayStart;
 %for sessionNum = daySequence
 
     fprintf('PreProcessing %s Day %02i...\n',animal,sessionNum);
     dayDir = fullfile(Info.rawDir, dayDirs{sessionNum}); 
-    dayDir = fullfile(Info.rawDir, "21_20211107")
+    %dayDir = fullfile(Info.rawDir, "21_20211107")
     disp(dayDir)
     % ---------
     % Checksum 
@@ -309,9 +310,10 @@ sessionNum = 1; disp(dayDirs{sessionNum})
     % ----------------------
     % Spiking (Mountainsort)
     % ----------------------
-    if dospiking
+    if dospikingcuration
         tet_options = ry_ml_tetoption(unique(areas), tetList);
-        tetsubset = cellfun(x(ismember(x,tetsubset)), tetList)
+        %tetsubset = cellfun(@(x) x(ismember(x,tetsubset)), tetList);
+        tetsubset = []
         ml_process_animal(animal, Info.rawDir,...
             'dataDir',       Info.directDir,    ...
             'dayDirs',       dayDir,           ...
@@ -323,8 +325,13 @@ sessionNum = 1; disp(dayDirs{sessionNum})
             'tet_list', tetsubset, ...
             'tet_options', tet_options);
 
-        ms_store = fullfile(Info.directDir, 'MountainSort',...
-                            sprintf('%s_%02d.mountain',animal,sessionNum))
+
+    end
+    if dospiking
+        ms_store = fullfile(Info.directDir, ...
+                            'MountainSort',...
+                             sprintf('%s_%02d.mountain',animal,sessionNum)...
+                            )
         convert_ml_to_FF_withMultiunitAndMarks(animal, ms_store, ...
             sessionNum, 'tet_options', tet_options, 'overwrite', true);
         cellLib.update.cells(animal,     'index', sessionNum)
@@ -371,7 +378,7 @@ sessionNum = 1; disp(dayDirs{sessionNum})
         util.rsync.rawpull(animal, dayDirs{sessionNum+direction}, 'sessionNum', sessionNum+direction, rsync_kws{:}); % pull the next day of data
     end
 
-%end
+end
 keyboard
 
 %% ===================================

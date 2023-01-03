@@ -85,6 +85,10 @@ function [out, tetrodePerDir] = mda_util(dayDirs,varargin)
             dataDir = [topDir filesep parsed.anim '_direct' filesep];
         end
         particles = string({parsed.anim, parsed.day, parsed.date});
+        if isempty(particles)
+            warning("Is your regex pattern correct?")
+            keyboard
+        end
         particles = string(particles);
         particles = particles(strlength(particles)~=0);
         particles = char(join(particles,"_"));

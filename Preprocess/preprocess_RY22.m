@@ -219,7 +219,7 @@ sessionNum = 21; disp(dayDirs{sessionNum})
             fprintf('Delta Filtering LFPs...\n')
             mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
         end
-        if eegRefFilesd % high frequency defaults to referenced
+        if eegRefFiles % high frequency defaults to referenced
             fprintf('Ripple Filtering LFPs...\n')
             mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 1)
             rippletype = 'rippleref';

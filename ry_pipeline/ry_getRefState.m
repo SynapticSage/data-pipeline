@@ -9,6 +9,7 @@ ip.addParameter('lfp', true);
 ip.addParameter('animal', []);
 ip.addParameter('configDir',[]);
 ip.addParameter('configFile',[]);
+ip.addParameter('dataType','eeg');
 ip.addParameter('inds',[]);
 ip.parse(varargin{:})
 opt = ip.Results;
@@ -24,7 +25,7 @@ if opt.lfp % FROM LFP MAT FILES
     disp("Using lfp check")
 
     % Obtain the referenced data
-    lfp = ndb.load(opt.animal, 'eeg', 'inds',  opt.inds);
+    lfp = ndb.load(opt.animal, opt.dataType, 'inds',  opt.inds);
     referenced = cellfetch(lfp, 'referenced');
 
     % Obtain consensus

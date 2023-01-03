@@ -75,7 +75,7 @@ for tet = attributes
         %tags = tags(tags>loc);
         tetinfo(tetCnt).isRef = 0; % default value : references computed later in function
         if ~isempty(loc)
-            keyCap = key; key(1) = upper(key(1));
+            keyCap = key; keyCap(1) = upper(key(1));
             delim = char(";" + string(keyCap) + "/");
             areaTextRange = strsplit(tet.groupingTags, delim);
             [~,idx] = max(cellfun(@length, areaTextRange));

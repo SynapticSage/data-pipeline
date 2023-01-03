@@ -145,8 +145,17 @@ function out = ml_sort_on_segs(tetResDir,varargin)
                 if ~isempty(geom)
                     sortInputs.geom = geom;
                 end
-                sortOutputs.firings_out = tmp_firings;
-                ml_run_process('ms4alg.sort',sortInputs,sortOutputs,sortParams);
+                try
+                    sortOutputs.firings_out = tmp_firings;
+                        ml_run_process('ms4alg.sort',sortInputs,sortOutputs,sortParams);
+                catch
+                    warning("Failed on tetrode " + tetResDir + " segment " + k)
+                    % remove the epoch
+                    epoch_timeseries = epoch_timeseries(1:k-1);
+                    epoch_firings = epoch_firings(1:k-1);
+                    k = k - 1; % and walk our output number back by 1
+                    continue
+                end
                 epoch_firings{k} = tmp_firings;
 
                 % Correct for segment drift?
@@ -244,7 +253,7 @@ function out = ml_sort_on_segs(tetResDir,varargin)
     end
 
     % delete epoch segment files
-    if numel(epoch_offset_subset)>1
+    if exist('epoch_offset_subset', 'var') && numel(epoch_offset_subset)>1
         fprintf('\n------\nDeleting temporary segment mda file\n----\n')
         for k=1:numel(epoch_offset_subset)
             delete(epoch_timeseries{k})
