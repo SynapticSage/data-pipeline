@@ -13,8 +13,8 @@ addpath(genpath('~/Code/Src_Matlab/ry_Utility'))
 Info   = animalinfo(animal);
 %animalRawDir = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
 %animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
-animalRawDir    = Info.rawDir
-animalRawDirOut = Info.rawDir
+animalRawDirOut = replace(Info.rawDir, '/Volumes/Calyx/','/Volumes/GenuDrive/')
+animalRawDirOut = replace(Info.rawDir, '/Volumes/Calyx/','/Volumes/GenuDrive/')
 [dayDirs, sessionList, sessionIndex] = ry_selectDays(Info.rawDir,...
                                                      Info.rawFirstLabeledSession);
 
@@ -63,6 +63,8 @@ maxParallelJobs = 8;
 nDays = numel(dayDirs);
 dayStart = find(contains(dayDirs,'???'));
 dayStop  = find(contains(dayDirs,'???'));
+dayStart = find(contains(dayDirs,'69_'))
+dayStop  = find(contains(dayDirs,'69_'))
 
 % number of data types to export
 nExport = numel(exportTypes);
@@ -82,7 +84,7 @@ for iExport=1:nExport
     for iDay=dayStart:dayStop
         printMessage(progDays, "Day " + iDay + " export " + exportTypes{iExport});
         %try
-            cd(animalRawDir);
+            cd(animalrawdirout);
             day = dayDirs{iDay};
             printMessage(progDays, ['Running extraction script in ' day])
             cd(day);

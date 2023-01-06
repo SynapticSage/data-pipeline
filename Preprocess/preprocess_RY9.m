@@ -1,5 +1,4 @@
-% ----------------
-% Preprocess steps
+% ---------------- Preprocess steps
 % ----------------
 dospiking     = false;
 dolfp         = false;
@@ -66,6 +65,8 @@ logFile = [Info.directDir animal 'preprocess.log'];
     'selectMostFrequentRef', true);
 refList(hpcL) = refList(hpcR);
 nTets = max(cellfun(@max, tetList));
+disp("Area counts")
+disp({unique([tetStruct.area]), groupcounts([tetStruct.area]')'})
 %riptetlist = [1,2,3,4,5,6]; % Where to grab ripples from?
 
 %% Start log file
@@ -158,10 +159,9 @@ if dorsync
     util.rsync.rawpull(animal, dayDirs{daySequence(1)}, 'sessionNum', dayStart, rsync_kws{:});
 end
 
-for sessionNum = 6:7; disp(dayDirs{sessionNum})
-%sessionNum = dayStart;
-%for sessionNum = daySequence
+for sessionNum = 6:7
 
+    disp(dayDirs{sessionNum})
     fprintf('PreProcessing %s Day %02i...\n',animal,sessionNum);
     dayDir = fullfile(Info.rawDir, dayDirs{sessionNum}); 
     %dayDir = fullfile(Info.rawDir, "21_20211107")

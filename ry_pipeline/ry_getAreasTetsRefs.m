@@ -50,7 +50,7 @@ configFile=replace(configFile,path,newpath);
 xml = xml2struct(configFile);
 
 % Obtain the spikeNTrode attributes
-spikeNtrode = [xml.Configuration.SpikeConfiguration.SpikeNTrode{:}];
+spikeNtrode = ndb.toNd(xml.Configuration.SpikeConfiguration.SpikeNTrode);
 attributes  = {spikeNtrode.Attributes};
 attributes  = cat(2,attributes{:});
 

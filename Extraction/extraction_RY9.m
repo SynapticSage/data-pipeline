@@ -9,8 +9,10 @@ addpath(genpath('~/Code/Src_Matlab/ry_Utility'))
 %% Setup Extraction script
 % Define animal directory and day directories to extract
 %animal_dir     = '/media/ryoung/Thalamus/ry_GoalCoding_Project/RY9_experiment/RY9'
-animal_dir = '/Volumes/FastData/ry_GoalCoding_Project/RY9_experiment/RY9'
-animal_out_dir = '/Volumes/FastData/ry_GoalCoding_Project/RY9_experiment/RY9'
+%animal_dir = '/Volumes/FastData/ry_GoalCoding_Project/RY9_experiment/RY9'
+%animal_out_dir = '/Volumes/FastData/ry_GoalCoding_Project/RY9_experiment/RY9'
+animal_dir = Info.rawDir
+animal_out_dir = Info.rawDir
 %animal_out_dir = '/media/ryoung/Thalamus/ry_GoalCoding_Project/RY9_experiment/RY9'
 dayDirs = {'55_20190725',...
             '56_20190727',...
@@ -73,14 +75,20 @@ RecOrder = {
 %ZG: included all the run and sleep rec files from those 5 days
 % Export types and customFlags for each export function
 % #EXPORT
-exportTypes =    {'LFP','mda','dio','time'};
+exportTypes =    {'LFP'};
 exportFlgs = cell(length(exportTypes), 1);
-%exportFlgs{1} = '-outputrate 15000';
-%exportTypes =      {'spikes','LFP','time','dio','mda','phy'};
-%exportTypes =      {'raw','LFP','dio','spikes'};
-%exportFlgs = {'',...
-%    '',...
-%    ''};
+for iType = 1:numel(exportTypes)
+    if strcmp(exportTypes{iType}, 'raw')
+        exportFlgs{iType} = '-outputrate 30000 -userawrefs 1';
+    elseif strcmp(exportTypes{iType}, 'lfpraw')
+        exportFlgs{iType} = '-outputrate 30000 -userefs 1 -oneperntrode 0 -usespikefilters 0 -uselfpfilters 0';
+    elseif strcmp(exportTypes{iType}, 'LFP')
+        exportFlgs{iType} = '-userefs 0 -oneperntrode 1 -uselfpfilters 1';
+    elseif strcmp(exportTypes{iType}, 'mdaraw')
+        exportFlgs{iType} = '-userefs 1 -usespikefilters 0'; 
+    end
+end
+
 
 % Max parallel jobs for Matclust file generation
 % #MATLCUST
@@ -89,8 +97,9 @@ maxParallelJobs = 8;
 %% Loops through dayDirs and execute extraction in each folders
 % #BODY
 nDays = numel(dayDirs);
-dayStart = find(contains(dayDirs,'55_'));
-dayStop  = find(contains(dayDirs,'55_'));
+dayStart = find(contains(dayDirs,'59_'));
+dayStop  = find(contains(dayDirs,'59_'));
+
 nExport = numel(exportTypes);
 progExport = ProgressBar(nExport, 'Title', 'Exports')
 progDays = ProgressBar(dayStop-dayStart+1, 'Title', 'Days')

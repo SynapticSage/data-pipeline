@@ -4,6 +4,8 @@ ip = inputParser;
 ip.addParameter('addDatatypeCol', false);
 ip.addParameter('addIndMetadata', true);
 ip.addParameter('label', '');
+ip.addParameter('folder', '');
+ip.addParameter('tetrode', []);
 ip.parse(varargin{:})
 Opt = ip.Results;
 ind_labels = ndbFile.datatypeLevels('eeg');
