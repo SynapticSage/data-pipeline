@@ -58,4 +58,5 @@ else
     T = util.table.castefficient(T);
 end
 
+clearvars -except T % memory leak, so trying to reduce that here
 util.notify.pushover('Finished rhythm table')

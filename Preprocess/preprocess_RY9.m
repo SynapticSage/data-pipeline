@@ -17,7 +17,7 @@ extractmarks         = false; % produce marks for marked point process?
 overwriteMoutainSort = false; % overwrite ms files?
 % Regular expression for finding mountainsort folders (if your naming differs, you can change this)
 %mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_(?<overallDay>[0-9]{1,3})_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
-mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_?(?<overallDay>[0-9]{1,3})?_expDay(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
+mdaFolder_regExp = '(?<anim>[A-Z]+[0-9]+)_?(?<overallDay>[0-9]{1,3})?_(?<day>[0-9]{1,2})_?(?<date>[0-9]{6,8})?_?(?<epoch>[0-9]*)(?<epoch_name>\w*).mda';
 
 % ---------------
 % Main parameters
@@ -161,6 +161,7 @@ end
 
 for sessionNum = 6:7
 
+    day = sessionNum
     disp(dayDirs{sessionNum})
     fprintf('PreProcessing %s Day %02i...\n',animal,sessionNum);
     dayDir = fullfile(Info.rawDir, dayDirs{sessionNum}); 
@@ -191,12 +192,12 @@ for sessionNum = 6:7
         epochs = getEpochs(1);
         nEpochs = size(epochs,1);
 
-        % ------------------------
-        % Reference EEG or rename?
-        % ------------------------
-        configurationUnreferenced = ~ry_getRefState('animal',animal);
-        cd(currDir)
-        if any(configurationUnreferenced)
+        configurationUnreferenced = ~ry_getRefState('animal',animal,'inds',day,'dataType','eeg');
+        %eegrefIsRef = ry_getRefState('animal',animal,'inds',day,'dataType','eegref');
+        refLabelIsCorrect = any(configurationUnreferenced);
+        unrefIsActuallyRef = ~any(configurationUnreferenced);
+        refFilesNotCreated = ~ndbFile.exist(animal, 'eegref', day);
+        if refLabelIsCorrect && refFilesNotCreated
             % refData -- an E x N matrix with the local reference for each tetrode
             %            where unused tetrodes have a ref of zero.
             refData = zeros(nEpochs,nTets);
@@ -204,11 +205,16 @@ for sessionNum = 6:7
                 %refData(:,tetList{i}) = refList{sessionNum}(i);
                 refData(:,tetList{i}) = refList{i};
             end
+            disp("Referecing")
+            disp(refData)
             mcz_createRefEEG(Info.rawDir, Info.directDir, animal, sessionNum, refData)
-        else
+        elseif unrefIsActuallyRef
             ry_renameEEGtoEEGref()
         end
-        eegFiles    = ndbFile.exist(animal, 'eeg', day);
+        filterDir = [fileparts(which('thetafilter.mat')) '/'];
+
+        % Make filtered files
+        eegFiles    = ndbFile.exist(animal, 'eeg',    day);
         eegRefFiles = ndbFile.exist(animal, 'eegref', day);
         if eegFiles % low frequency defaults to unreferenced
             fprintf('Theta Filtering LFPs...\n')
@@ -221,7 +227,7 @@ for sessionNum = 6:7
             fprintf('Delta Filtering LFPs...\n')
             mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
         end
-        if eegRefFilesd % high frequency defaults to referenced
+        if eegRefFiles % high frequency defaults to referenced
             fprintf('Ripple Filtering LFPs...\n')
             mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 1)
             rippletype = 'rippleref';
