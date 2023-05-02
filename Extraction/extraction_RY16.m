@@ -6,14 +6,17 @@ addpath(genpath('~/Code/pipeline/TrodesExtractionGUI'))
 addpath(genpath('~/Code/pipeline/preprocess'))
 addpath(genpath('~/Code/pipeline/ry_pipeline'))
 addpath(genpath('~/Code/Src_Matlab/ry_Utility'))
+Info = animalinfo("RY16")
 
 %% Setup Extraction script
 % -------------- WHAT/WHERE TO PROCESS ------------------
 % Define animal directory and day directories to extract
-animalRawDir = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
-animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+%animalRawDir = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
+%animalRawDirOut = '/Volumes/FastData/ry_GoalCoding_Project/RY16_experiment/RY16_fix'
 %animalRawDir    = '/Volumes/GenuDrive/RY16_fix'
 %animalRawDirOut = '/Volumes/GenuDrive/RY16_fix'
+animalRawDir    = '/Volumes/GenuDrive/RY16_fix/'
+animalRawDirOut = '/Volumes/GenuDrive/RY16_fix/'
 [dayDirs, sessionList] = ry_selectDays('/Volumes/Calyx/RY16_fix/', 45, 69)
 
 % Define file prefixes, used to fix filenames in a day_dir and for creating
@@ -29,11 +32,11 @@ recOrder = ry_generateRecOrder(animalRawDir, dayDirs,...
     'skipNonexist', true)
            
 % -------------- WHAT TO EXPORT ------------------
-exportTypes =       {'spikes'};
+%exportTypes =       {'spikes'};
 %exportTypes =       {'mdaraw'};
 %exportTypes =       {'dio'};
 %exportTypes =       {'LFP', 'mda', 'time'};
-%exportTypes =       {'LFP'};
+exportTypes =       {'LFP'};
 %exportTypes =       {'mda','raw','time'};
 exportFlgs = cell(length(exportTypes), 1);
 %exportTypes =      {'spikes','LFP','time','dio','mda','phy'};
@@ -59,8 +62,8 @@ maxParallelJobs = 8;
 
 % Number of days
 nDays = numel(dayDirs);
-dayStart = find(contains(dayDirs,'???'));
-dayStop  = find(contains(dayDirs,'???'));
+dayStart = find(contains(dayDirs,'69_'));
+dayStop  = find(contains(dayDirs,'69_'));
 
 % number of data types to export
 nExport = numel(exportTypes);

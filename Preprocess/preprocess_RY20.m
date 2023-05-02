@@ -58,12 +58,19 @@ logFile = [Info.directDir animal 'preprocess.log'];
 
 % Tetrode metadata
 % ----------------
-[hpcL, hpcR, pfc] = deal(1, 2, 3);
+[hpcL, hpcR, ofc, pfc] = deal(1, 2, 3, 4);
 [tetStruct, areas, tetList, refList] = ry_getAreasTetsRefs(...
     'configFile', Info.configFile,...
     'removeAreas', [ "SuperDead" ],...
     'selectMostFrequentRef', true);
+
+% TODO RY20, why does it pull the ref for OFC correctly but not PFC?
+% Is a ref tet only permitted by the code to appear once?
+
+% MANUAL RY20 REF ADJUSTMENTS
 refList(hpcL) = refList(hpcR);
+refList(pfc) = refList(ofc);
+
 nTets = max(cellfun(@max, tetList));
 %riptetlist = [1,2,3,4,5,6]; % Where to grab ripples from?
 
@@ -193,9 +200,14 @@ for sessionNum = 6:7; disp(dayDirs{sessionNum})
         % ------------------------
         % Reference EEG or rename?
         % ------------------------
-        configurationUnreferenced = ~ry_getRefState('animal',animal);
         cd(currDir)
-        if any(configurationUnreferenced)
+        day = sessionNum;
+        configurationUnreferenced = ~ry_getRefState('animal',animal,'inds',day,'dataType','eeg');
+        %eegrefIsRef = ry_getRefState('animal',animal,'inds',day,'dataType','eegref');
+        refLabelIsCorrect = any(configurationUnreferenced);
+        unrefIsActuallyRef = ~any(configurationUnreferenced);
+        refFilesNotCreated = ~ndbFile.exist(animal, 'eegref', day);
+        if refLabelIsCorrect && refFilesNotCreated
             % refData -- an E x N matrix with the local reference for each tetrode
             %            where unused tetrodes have a ref of zero.
             refData = zeros(nEpochs,nTets);
@@ -204,41 +216,12 @@ for sessionNum = 6:7; disp(dayDirs{sessionNum})
                 refData(:,tetList{i}) = refList{i};
             end
             mcz_createRefEEG(Info.rawDir, Info.directDir, animal, sessionNum, refData)
-        else
+        elseif unrefIsActuallyRef
             ry_renameEEGtoEEGref()
         end
-        eegFiles    = ndbFile.exist(animal, 'eeg', day);
-        eegRefFiles = ndbFile.exist(animal, 'eegref', day);
-        if eegFiles % low frequency defaults to unreferenced
-            fprintf('Theta Filtering LFPs...\n')
-            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 0)
-            fprintf('Delta Filtering LFPs...\n')
-            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 0)
-        elseif eegRefFiles
-            fprintf('Theta Filtering LFPs...\n')
-            mcz_thetadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'thetafilter.mat'], 'ref', 1)
-            fprintf('Delta Filtering LFPs...\n')
-            mcz_deltadayprocess(dayDir,  Info.directDir, animal, day, 'f', [filterDir 'deltafilter.mat'], 'ref', 1)
-        end
-        if eegRefFilesd % high frequency defaults to referenced
-            fprintf('Ripple Filtering LFPs...\n')
-            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 1)
-            rippletype = 'rippleref';
-        elseif eegFiles
-            fprintf('Ripple Filtering LFPs...\n')
-            mcz_rippledayprocess(dayDir, Info.directDir, animal, day, 'f', [filterDir 'ripplefilter.mat'], 'ref', 0)
-            rippletype = 'ripple';
-        end
-        % generating ripple events
-        min_suprathresh_duration = 0.015;
-        nstd = 2;
-        lfpLib.create.generateSPWRevents(Info.directDir, animal, day, cat(2,tetList{1:3}), ...
-            min_suprathresh_duration, nstd,...
-            'rippletype', rippletype)
-        lfpLib.create.generateGlobalRipples(animal);
-        % and cortical ripples
-        lfpLib.create.generateGlobalRipples(animal, 'brainarea', 'PFC', 'name', 'rippletimepfc');
 
+        lfpLib.create.downstreamFilterAndGlobalFiles(animal, day, dayDir)
+        system('pushover-cli "finished lfp filtration"')
     end
 
     % --------

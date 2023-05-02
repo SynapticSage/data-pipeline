@@ -321,6 +321,7 @@ for sessionNum = 6:7
         tet_options = ry_ml_tetoption(unique(areas), tetList);
         %tetsubset = cellfun(@(x) x(ismember(x,tetsubset)), tetList);
         tetsubset = []
+
         ml_process_animal(animal, Info.rawDir,...
             'dataDir',       Info.directDir,    ...
             'dayDirs',       dayDir,           ...
@@ -331,7 +332,7 @@ for sessionNum = 6:7
             'overwrite', overwriteMoutainSort, ...
             'tet_list', tetsubset, ...
             'tet_options', tet_options);
-
+        !pushover-cli "Finished clustering"
 
     end
     if dospiking

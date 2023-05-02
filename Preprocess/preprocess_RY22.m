@@ -62,10 +62,14 @@ logFile = [Info.directDir animal 'preprocess.log'];
     'configFile', Info.configFile,...
     'removeAreas', [ "SuperDead" ],...
     'selectMostFrequentRef', true);
+
+% ANIMAL SPECIFIC! TODO check this
 refList(hpcL) = refList(hpcR);
+
 nTets = max(cellfun(@max, tetList));
 %riptetlist = [1,2,3,4,5,6]; % Where to grab ripples from?
 
+%% ==============
 %% Start log file
 %% ==============
 % If logFile, attach a header sequence

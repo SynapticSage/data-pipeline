@@ -75,7 +75,7 @@ RecOrder = {
 %ZG: included all the run and sleep rec files from those 5 days
 % Export types and customFlags for each export function
 % #EXPORT
-exportTypes =    {'LFP'};
+exportTypes =    {'time','LFP'};
 exportFlgs = cell(length(exportTypes), 1);
 for iType = 1:numel(exportTypes)
     if strcmp(exportTypes{iType}, 'raw')

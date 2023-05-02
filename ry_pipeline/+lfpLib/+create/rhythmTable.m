@@ -56,6 +56,9 @@ else
     end
     T = cat(1, T{:});
     T = util.table.castefficient(T);
+    for col in [Opt.label, 'raw']
+        T.(col) = float32(T.(col));
+    end
 end
 
 clearvars -except T % memory leak, so trying to reduce that here
